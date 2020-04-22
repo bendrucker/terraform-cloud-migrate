@@ -46,6 +46,7 @@ func (s *RemoteStateStep) Changes() (Changes, hcl.Diagnostics) {
 		diags = append(diags, sDiags...)
 
 		for _, source := range sources {
+			filepath := source.DeclRange.Filename
 			file, fDiags := s.module.File(source.DeclRange.Filename)
 			diags = append(diags, fDiags...)
 
@@ -161,7 +162,7 @@ func (s *RemoteStateStep) Changes() (Changes, hcl.Diagnostics) {
 				},
 			}))
 
-			changes[path] = &Change{File: file}
+			changes[filepath] = &Change{File: file}
 		}
 
 		if diags.HasErrors() {
@@ -184,30 +185,25 @@ Source:
 		attrs, aDiags := source.Config.JustAttributes()
 		diags = append(diags, aDiags...)
 
-		for _, attr := range attrs {
-			switch attr.Name {
-			case "backend":
-				v, vDiags := attr.Expr.Value(nil)
-				diags = append(diags, vDiags...)
+		backend, bDiags := attrs["backend"].Expr.Value(nil)
+		diags = append(diags, bDiags...)
 
-				if v.AsString() != s.module.Backend().Type {
-					continue Source
-				}
-			case "config":
-				remoteStateConfig, rDiags := attr.Expr.Value(nil)
-				diags = append(diags, rDiags...)
+		if backend.AsString() != s.module.Backend().Type {
+			continue
+		}
 
-				remoteBackendConfigAttrs, rDiags := s.module.Backend().Config.JustAttributes()
-				diags = append(diags, rDiags...)
+		config, cDiags := attrs["config"].Expr.Value(nil)
+		diags = append(diags, cDiags...)
 
-				for key, value := range remoteStateConfig.AsValueMap() {
-					rbValue, rDiags := remoteBackendConfigAttrs[key].Expr.Value(nil)
-					diags = append(diags, rDiags...)
+		remoteBackendConfigAttrs, rDiags := s.module.Backend().Config.JustAttributes()
+		diags = append(diags, rDiags...)
 
-					if value.AsString() != rbValue.AsString() {
-						continue Source
-					}
-				}
+		for key, value := range config.AsValueMap() {
+			rbValue, rDiags := remoteBackendConfigAttrs[key].Expr.Value(nil)
+			diags = append(diags, rDiags...)
+
+			if value.AsString() != rbValue.AsString() {
+				continue Source
 			}
 		}
 
@@ -221,8 +217,16 @@ func (s *RemoteStateStep) workspaceNameTokens(workspace *hclwrite.Attribute) hcl
 	if s.RemoteBackend.Workspaces.Prefix == "" {
 		return hclwrite.Tokens{
 			{
-				Type:  hclsyntax.TokenQuotedLit,
-				Bytes: []byte(`"` + s.RemoteBackend.Workspaces.Name + `"`),
+				Type:  hclsyntax.TokenOQuote,
+				Bytes: []byte(`"`),
+			},
+			{
+				Type:  hclsyntax.TokenStringLit,
+				Bytes: []byte(s.RemoteBackend.Workspaces.Name),
+			},
+			{
+				Type:  hclsyntax.TokenCQuote,
+				Bytes: []byte(`"`),
 			},
 		}
 	}
