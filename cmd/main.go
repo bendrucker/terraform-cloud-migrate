@@ -84,7 +84,7 @@ func main() {
 						destination = change.Rename
 					}
 
-					file, err := os.OpenFile(destination, os.O_CREATE|os.O_WRONLY, 0644)
+					file, err := os.OpenFile(destination, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 					if err != nil {
 						return err
 					}
