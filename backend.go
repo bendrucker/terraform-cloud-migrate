@@ -44,7 +44,7 @@ func (b *RemoteBackendStep) MultipleWorkspaces() bool {
 }
 
 // Changes updates the configured backend
-func (b *RemoteBackendStep) Changes() ([]*hclwrite.File, error) {
+func (b *RemoteBackendStep) Changes() (Changes, error) {
 	path := b.Module.Backend.DeclRange.Filename
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -79,7 +79,7 @@ func (b *RemoteBackendStep) Changes() ([]*hclwrite.File, error) {
 
 	}
 
-	return []*hclwrite.File{file}, nil
+	return Changes{path: file}, nil
 }
 
 var _ Step = (*RemoteBackendStep)(nil)

@@ -2,6 +2,9 @@ package migrate
 
 import "github.com/hashicorp/hcl/v2/hclwrite"
 
+// Changes is a map of changed file objects that should be written to prepare the module for Terraform Cloud
+type Changes map[string]*hclwrite.File
+
 // Step is a step required to prepare a module to run in Terraform Cloud
 type Step interface {
 	// Complete returns whether the step has been completed
@@ -11,5 +14,5 @@ type Step interface {
 	Description() string
 
 	// Changes returns a list of files changes that will complete the step or any error if one ocurred. If Complete() returns true, this should be empty.
-	Changes() ([]*hclwrite.File, error)
+	Changes() (Changes, error)
 }

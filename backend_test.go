@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -11,7 +12,8 @@ import (
 
 func TestRemoteBackendStep_incomplete(t *testing.T) {
 	parser := configs.NewParser(nil)
-	mod, _ := parser.LoadConfigDir("./fixtures/backend/incomplete")
+	path := "./fixtures/backend/incomplete"
+	mod, _ := parser.LoadConfigDir(path)
 
 	step := RemoteBackendStep{
 		Module: mod,
@@ -46,12 +48,13 @@ terraform {
 }
 `)
 
-	assert.Equal(t, expected, string(changes[0].Bytes()))
+	assert.Equal(t, expected, string(changes[filepath.Join(path, "backend.tf")].Bytes()))
 }
 
 func TestRemoteBackendStep_incomplete_prefix(t *testing.T) {
 	parser := configs.NewParser(nil)
-	mod, _ := parser.LoadConfigDir("./fixtures/backend/incomplete")
+	path := "fixtures/backend/incomplete"
+	mod, _ := parser.LoadConfigDir(path)
 
 	step := RemoteBackendStep{
 		Module: mod,
@@ -86,7 +89,7 @@ terraform {
 }
 `)
 
-	assert.Equal(t, expected, string(changes[0].Bytes()))
+	assert.Equal(t, expected, string(changes[filepath.Join(path, "backend.tf")].Bytes()))
 }
 
 func TestRemoteBackendStep_complete(t *testing.T) {
