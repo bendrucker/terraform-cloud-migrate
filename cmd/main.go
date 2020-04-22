@@ -79,9 +79,16 @@ func main() {
 
 				for path, file := range changes {
 					changed = true
-					fmt.Fprintln(os.Stderr, "file: ", path, "desc: ", step.Description())
-					file.WriteTo(os.Stderr)
-					fmt.Fprint(os.Stderr, "\n\n")
+					var deleted string
+					if file == nil {
+						deleted = " (Will Be Deleted)"
+					}
+					fmt.Fprintln(os.Stderr, "file: ", path, deleted, "\nissue: ", step.Description())
+					if file != nil {
+						file.WriteTo(os.Stderr)
+					}
+
+					fmt.Fprint(os.Stderr, "\n")
 				}
 			}
 
