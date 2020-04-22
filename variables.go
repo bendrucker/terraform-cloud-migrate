@@ -2,15 +2,21 @@ package migrate
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/hashicorp/terraform/configs"
+	"github.com/zclconf/go-cty/cty"
 )
 
 type TerraformWorkspaceStep struct {
-	Module *configs.Module
+	Module   *configs.Module
+	Variable string
 }
 
 // Complete checks if any terraform.workspace replaces are proposed
@@ -37,23 +43,46 @@ func (s *TerraformWorkspaceStep) Changes() (Changes, error) {
 		}
 
 		file, _ := hclwrite.ParseConfig(bytes, path, hcl.InitialPos)
-		removeTerraformWorkspace(file.Body())
+		replaceTerraformWorkspace(file.Body(), s.Variable)
 		files[path] = file
 	}
 
-	return changedFiles(parser.Sources(), files)
+	changes, err := changedFiles(parser.Sources(), files)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(changes) == 0 {
+		return changes, nil
+	}
+
+	if _, ok := s.Module.Variables[s.Variable]; !ok {
+		path := filepath.Join(s.Module.SourceDir, "variables.tf")
+		b, err := ioutil.ReadFile(path)
+
+		var file *hclwrite.File
+		if os.IsNotExist(err) {
+			file = hclwrite.NewEmptyFile()
+		} else {
+			file, _ = hclwrite.ParseConfig(b, path, hcl.InitialPos)
+		}
+
+		changes[path] = addWorkspaceVariable(file, s.Variable)
+	}
+
+	return changes, nil
 }
 
-func removeTerraformWorkspace(body *hclwrite.Body) {
+func replaceTerraformWorkspace(body *hclwrite.Body, variable string) {
 	for _, attr := range body.Attributes() {
 		attr.Expr().RenameVariablePrefix(
 			[]string{"terraform", "workspace"},
-			[]string{"var", "environment"},
+			[]string{"var", variable},
 		)
 	}
 
 	for _, block := range body.Blocks() {
-		removeTerraformWorkspace(block.Body())
+		replaceTerraformWorkspace(block.Body(), variable)
 	}
 }
 
@@ -74,6 +103,29 @@ func changedFiles(sources map[string][]byte, files Changes) (Changes, error) {
 	}
 
 	return changed, nil
+}
+
+func addWorkspaceVariable(file *hclwrite.File, name string) *hclwrite.File {
+	blocks := file.Body().Blocks()
+	file = hclwrite.NewEmptyFile()
+	body := file.Body()
+
+	variable := body.AppendBlock(hclwrite.NewBlock("variable", []string{name})).Body()
+	body.AppendNewline()
+
+	variable.SetAttributeRaw("type", hclwrite.Tokens{
+		{
+			Type:  hclsyntax.TokenIdent,
+			Bytes: []byte("string"),
+		},
+	})
+	variable.SetAttributeValue("description", cty.StringVal(fmt.Sprintf("The %s where the module will be deployed", name)))
+
+	for _, block := range blocks {
+		body.AppendBlock(block)
+	}
+
+	return file
 }
 
 var _ Step = (*TerraformWorkspaceStep)(nil)

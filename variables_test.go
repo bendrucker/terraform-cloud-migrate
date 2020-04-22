@@ -16,7 +16,8 @@ func TestTerraforkWorkspaceStep_incomplete(t *testing.T) {
 	mod, _ := parser.LoadConfigDir(path)
 
 	step := TerraformWorkspaceStep{
-		Module: mod,
+		Module:   mod,
+		Variable: "environment",
 	}
 
 	assert.False(t, step.Complete())
@@ -26,7 +27,7 @@ func TestTerraforkWorkspaceStep_incomplete(t *testing.T) {
 		return
 	}
 
-	expected := strings.TrimSpace(`
+	expectedOutputs := strings.TrimSpace(`
 output "attribute" {
   value = var.environment
 }
@@ -40,8 +41,19 @@ output "function" {
 }	
 `)
 
-	assert.Len(t, changes, 1)
-	assert.Equal(t, expected, strings.TrimSpace(string(changes[filepath.Join(path, "outputs.tf")].Bytes())))
+	expectedVariables := strings.TrimSpace(`
+variable "environment" {
+  type        = string
+  description = "The environment where the module will be deployed"
+}
+
+variable "foo" {}
+`)
+
+	assert.Len(t, changes, 2)
+	assert.Equal(t, expectedOutputs, strings.TrimSpace(string(changes[filepath.Join(path, "outputs.tf")].Bytes())))
+	assert.Equal(t, expectedVariables, strings.TrimSpace(string(changes[filepath.Join(path, "variables.tf")].Bytes())))
+
 }
 
 func TestTerraforkWorkspaceStep_complete(t *testing.T) {
