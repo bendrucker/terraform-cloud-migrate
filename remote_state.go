@@ -18,7 +18,7 @@ type RemoteStateStep struct {
 }
 
 // Complete checks if any modules in the path are using remote_state
-func (b *RemoteStateStep) Complete() bool {
+func (s *RemoteStateStep) Complete() bool {
 	return false
 }
 
@@ -49,107 +49,117 @@ func (s *RemoteStateStep) Changes() (Changes, hcl.Diagnostics) {
 			file, fDiags := s.module.File(source.DeclRange.Filename)
 			diags = append(diags, fDiags...)
 
-			sourceAttrs, sDiags := source.Config.JustAttributes()
-			diags = append(diags, sDiags...)
-
-			if ws, ok := sourceAttrs["workspace"]; ok {
-				// workspace := ws.Expr
-				_ = ws
-				// diags = append(diags, wDiags...)
-			}
-
 			block := file.Body().FirstMatchingBlock("data", []string{
 				source.Type,
 				source.Name,
 			})
 
+			workspace := block.Body().RemoveAttribute("workspace")
+
 			block.Body().SetAttributeValue("backend", cty.StringVal("remote"))
-			block.Body().SetAttributeRaw("config", hclwrite.Tokens{
+			block.Body().SetAttributeRaw("config", flattenTokens([]hclwrite.Tokens{
 				{
-					Type:  hclsyntax.TokenOBrace,
-					Bytes: []byte("{"),
+					{
+						Type:  hclsyntax.TokenOBrace,
+						Bytes: []byte("{"),
+					},
+					{
+						Type:  hclsyntax.TokenNewline,
+						Bytes: []byte("\n"),
+					},
+					{
+						Type:  hclsyntax.TokenIdent,
+						Bytes: []byte("hostname"),
+					},
+					{
+						Type:  hclsyntax.TokenEqual,
+						Bytes: []byte("="),
+					},
+					{
+						Type:  hclsyntax.TokenOQuote,
+						Bytes: []byte(`"`),
+					},
+					{
+						Type:  hclsyntax.TokenQuotedLit,
+						Bytes: []byte(s.RemoteBackend.Hostname),
+					},
+					{
+						Type:  hclsyntax.TokenCQuote,
+						Bytes: []byte(`"`),
+					},
+					{
+						Type:  hclsyntax.TokenNewline,
+						Bytes: []byte("\n"),
+					},
+					{
+						Type:  hclsyntax.TokenIdent,
+						Bytes: []byte("organization"),
+					},
+					{
+						Type:  hclsyntax.TokenEqual,
+						Bytes: []byte("="),
+					},
+					{
+						Type:  hclsyntax.TokenOQuote,
+						Bytes: []byte(`"`),
+					},
+					{
+						Type:  hclsyntax.TokenQuotedLit,
+						Bytes: []byte(s.RemoteBackend.Organization),
+					},
+					{
+						Type:  hclsyntax.TokenCQuote,
+						Bytes: []byte(`"`),
+					},
+					{
+						Type:  hclsyntax.TokenNewline,
+						Bytes: []byte("\n\n"),
+					},
+					{
+						Type:  hclsyntax.TokenIdent,
+						Bytes: []byte("workspaces"),
+					},
+					{
+						Type:  hclsyntax.TokenEqual,
+						Bytes: []byte("="),
+					},
+					{
+						Type:  hclsyntax.TokenOBrace,
+						Bytes: []byte("{"),
+					},
+					{
+						Type:  hclsyntax.TokenNewline,
+						Bytes: []byte("\n"),
+					},
+					{
+						Type:  hclsyntax.TokenStringLit,
+						Bytes: []byte("name"),
+					},
+					{
+						Type:  hclsyntax.TokenEqual,
+						Bytes: []byte("="),
+					},
 				},
+				s.workspaceNameTokens(workspace),
 				{
-					Type:  hclsyntax.TokenNewline,
-					Bytes: []byte("\n"),
+					{
+						Type:  hclsyntax.TokenNewline,
+						Bytes: []byte("\n"),
+					},
+					{
+						Type:  hclsyntax.TokenCBrace,
+						Bytes: []byte("}"),
+					},
+					{
+						Type:  hclsyntax.TokenNewline,
+						Bytes: []byte("\n"),
+					},
+					{
+						Type:  hclsyntax.TokenCBrace,
+						Bytes: []byte("}"),
+					},
 				},
-				{
-					Type:  hclsyntax.TokenStringLit,
-					Bytes: []byte("hostname"),
-				},
-				{
-					Type:  hclsyntax.TokenEqual,
-					Bytes: []byte("= "),
-				},
-				{
-					Type:  hclsyntax.TokenQuotedLit,
-					Bytes: []byte(`"` + s.RemoteBackend.Hostname + `"`),
-				},
-				{
-					Type:  hclsyntax.TokenNewline,
-					Bytes: []byte("\n"),
-				},
-				{
-					Type:  hclsyntax.TokenStringLit,
-					Bytes: []byte("organization"),
-				},
-				{
-					Type:  hclsyntax.TokenEqual,
-					Bytes: []byte("= "),
-				},
-				{
-					Type:  hclsyntax.TokenQuotedLit,
-					Bytes: []byte(`"` + s.RemoteBackend.Organization + `"`),
-				},
-				{
-					Type:  hclsyntax.TokenNewline,
-					Bytes: []byte("\n\n"),
-				},
-				{
-					Type:  hclsyntax.TokenStringLit,
-					Bytes: []byte("workspaces"),
-				},
-				{
-					Type:  hclsyntax.TokenEqual,
-					Bytes: []byte(" ="),
-				},
-				{
-					Type:  hclsyntax.TokenOBrace,
-					Bytes: []byte("{"),
-				},
-				{
-					Type:  hclsyntax.TokenNewline,
-					Bytes: []byte("\n"),
-				},
-				{
-					Type:  hclsyntax.TokenStringLit,
-					Bytes: []byte("name"),
-				},
-				{
-					Type:  hclsyntax.TokenEqual,
-					Bytes: []byte("= "),
-				},
-				{
-					Type:  hclsyntax.TokenQuotedLit,
-					Bytes: []byte(`"` + s.RemoteBackend.Workspaces.Name + `"`),
-				},
-				{
-					Type:  hclsyntax.TokenNewline,
-					Bytes: []byte("\n"),
-				},
-				{
-					Type:  hclsyntax.TokenCBrace,
-					Bytes: []byte("}"),
-				},
-				{
-					Type:  hclsyntax.TokenNewline,
-					Bytes: []byte("\n"),
-				},
-				{
-					Type:  hclsyntax.TokenCBrace,
-					Bytes: []byte("}"),
-				},
-			})
+			}))
 
 			changes[path] = &Change{File: file}
 		}
@@ -205,6 +215,53 @@ Source:
 	}
 
 	return sources, diags
+}
+
+func (s *RemoteStateStep) workspaceNameTokens(workspace *hclwrite.Attribute) hclwrite.Tokens {
+	if s.RemoteBackend.Workspaces.Prefix == "" {
+		return hclwrite.Tokens{
+			{
+				Type:  hclsyntax.TokenQuotedLit,
+				Bytes: []byte(`"` + s.RemoteBackend.Workspaces.Name + `"`),
+			},
+		}
+	}
+
+	return flattenTokens([]hclwrite.Tokens{
+		{
+			{
+				Type:  hclsyntax.TokenOQuote,
+				Bytes: []byte(`"`),
+			},
+			{
+				Type:  hclsyntax.TokenStringLit,
+				Bytes: []byte(s.RemoteBackend.Workspaces.Prefix),
+			},
+			{
+				Type:  hclsyntax.TokenTemplateInterp,
+				Bytes: []byte("${"),
+			},
+		},
+		workspace.Expr().BuildTokens(nil),
+		{
+			{
+				Type:  hclsyntax.TokenTemplateSeqEnd,
+				Bytes: []byte("}"),
+			},
+			{
+				Type:  hclsyntax.TokenCQuote,
+				Bytes: []byte(`"`),
+			},
+		},
+	})
+}
+
+func flattenTokens(in []hclwrite.Tokens) hclwrite.Tokens {
+	out := make(hclwrite.Tokens, 0)
+	for _, tokens := range in {
+		out = append(out, tokens...)
+	}
+	return out
 }
 
 var _ Step = (*RemoteStateStep)(nil)

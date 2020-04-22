@@ -94,7 +94,7 @@ data "terraform_remote_state" "match" {
   config = {
     hostname     = "host.name"
     organization = "org"
-    
+
     workspaces = {
       name = "ws-${terraform.workspace}"
     }
