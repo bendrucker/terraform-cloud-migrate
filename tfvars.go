@@ -4,10 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-
-	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/hclwrite"
-	"github.com/hashicorp/terraform/configs"
 )
 
 const (
@@ -16,7 +12,8 @@ const (
 )
 
 type TfvarsStep struct {
-	Module *configs.Module
+	module   *Module
+	filename string
 }
 
 // Complete checks if a terraform.tfvars file exists and returns false if it does
@@ -31,7 +28,7 @@ func (s *TfvarsStep) Description() string {
 }
 
 func (s *TfvarsStep) path(filename string) string {
-	return filepath.Join(s.Module.SourceDir, filename)
+	return filepath.Join(s.module.Dir(), filename)
 }
 
 // Changes determines changes required to remove terraform.workspace
@@ -41,17 +38,13 @@ func (s *TfvarsStep) Changes() (Changes, error) {
 	}
 
 	existing := s.path(TfvarsFilename)
-
-	bytes, err := ioutil.ReadFile(existing)
-	if err != nil {
-		return nil, err
-	}
-
-	file, _ := hclwrite.ParseConfig(bytes, existing, hcl.InitialPos)
+	file := s.module.File(existing)
 
 	return Changes{
-		existing:                        nil,
-		s.path(TfvarsAlternateFilename): file,
+		existing: &Change{
+			File:   file,
+			Rename: s.filename,
+		},
 	}, nil
 }
 

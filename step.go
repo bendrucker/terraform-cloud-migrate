@@ -2,8 +2,13 @@ package migrate
 
 import "github.com/hashicorp/hcl/v2/hclwrite"
 
+type Change struct {
+	File   *hclwrite.File
+	Rename string
+}
+
 // Changes is a map of changed file objects that should be written to prepare the module for Terraform Cloud
-type Changes map[string]*hclwrite.File
+type Changes map[string]*Change
 
 // Step is a step required to prepare a module to run in Terraform Cloud
 type Step interface {

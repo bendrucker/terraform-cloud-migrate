@@ -15,7 +15,7 @@ import (
 )
 
 type TerraformWorkspaceStep struct {
-	Module   *configs.Module
+	module   *Module
 	Variable string
 }
 
@@ -33,7 +33,7 @@ func (s *TerraformWorkspaceStep) Description() string {
 // Changes determines changes required to remove terraform.workspace
 func (s *TerraformWorkspaceStep) Changes() (Changes, error) {
 	parser := configs.NewParser(nil)
-	primary, _, _ := parser.ConfigDirFiles(s.Module.SourceDir)
+	primary, _, _ := parser.ConfigDirFiles(s.module.Dir())
 
 	files := make(Changes)
 	for _, path := range primary {
@@ -44,7 +44,7 @@ func (s *TerraformWorkspaceStep) Changes() (Changes, error) {
 
 		file, _ := hclwrite.ParseConfig(bytes, path, hcl.InitialPos)
 		replaceTerraformWorkspace(file.Body(), s.Variable)
-		files[path] = file
+		files[path] = &Change{File: file}
 	}
 
 	changes, err := changedFiles(parser.Sources(), files)
@@ -56,8 +56,8 @@ func (s *TerraformWorkspaceStep) Changes() (Changes, error) {
 		return changes, nil
 	}
 
-	if _, ok := s.Module.Variables[s.Variable]; !ok {
-		path := filepath.Join(s.Module.SourceDir, "variables.tf")
+	if _, ok := s.module.Variables()[s.Variable]; !ok {
+		path := filepath.Join(s.module.Dir(), "variables.tf")
 		b, err := ioutil.ReadFile(path)
 
 		var file *hclwrite.File
@@ -67,7 +67,9 @@ func (s *TerraformWorkspaceStep) Changes() (Changes, error) {
 			file, _ = hclwrite.ParseConfig(b, path, hcl.InitialPos)
 		}
 
-		changes[path] = addWorkspaceVariable(file, s.Variable)
+		changes[path] = &Change{
+			File: addWorkspaceVariable(file, s.Variable),
+		}
 	}
 
 	return changes, nil
@@ -86,20 +88,20 @@ func replaceTerraformWorkspace(body *hclwrite.Body, variable string) {
 	}
 }
 
-func changedFiles(sources map[string][]byte, files Changes) (Changes, error) {
+func changedFiles(sources map[string][]byte, changes Changes) (Changes, error) {
 	changed := make(Changes)
 
-	for path, file := range files {
+	for path, change := range changes {
 		b, err := ioutil.ReadFile(path)
 		if err != nil {
 			return nil, err
 		}
 
-		if bytes.Equal(b, file.Bytes()) {
+		if bytes.Equal(b, change.File.Bytes()) {
 			continue
 		}
 
-		changed[path] = file
+		changed[path] = &Change{File: change.File}
 	}
 
 	return changed, nil

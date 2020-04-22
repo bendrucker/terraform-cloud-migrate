@@ -7,7 +7,6 @@ import (
 	"os"
 
 	migrate "github.com/bendrucker/terraform-cloud-migrate"
-	"github.com/hashicorp/terraform/configs"
 
 	"github.com/urfave/cli/v2"
 )
@@ -21,78 +20,68 @@ func main() {
 				Value: "app.terraform.io",
 			},
 			&cli.StringFlag{
-				Name:  "organization",
-				Usage: "Organization name in Terraform Cloud",
+				Name:     "organization",
+				Usage:    "Organization name in Terraform Cloud",
+				Required: true,
 			},
 			&cli.StringFlag{
 				Name:  "workspace-name",
-				Usage: "Variable that will replace terraform.workspace",
+				Usage: "The name for the workspace",
 			},
 			&cli.StringFlag{
 				Name:  "workspace-prefix",
-				Usage: "Variable that will replace terraform.workspace",
+				Usage: "The prefix for the workspaces",
 			},
 			&cli.StringFlag{
 				Name:  "workspace-variable",
 				Usage: "Variable that will replace terraform.workspace",
 				Value: "environment",
 			},
+			&cli.StringFlag{
+				Name:  "tfvars-filename",
+				Usage: "New filename for terraform.tfvars",
+				Value: migrate.TfvarsAlternateFilename,
+			},
 		},
 		Action: func(c *cli.Context) error {
-			path := c.Args().First()
-			if empty, err := configs.IsEmptyDir(path); empty || err != nil {
-				return fmt.Errorf("could not load Terraform files from %s", path)
+			if !c.IsSet("workspace-name") && !c.IsSet("workspace-prefix") {
+				return errors.New("one of --workspace-name or --workspace-prefix must be set")
 			}
 
-			parser := configs.NewParser(nil)
-			mod, _ := parser.LoadConfigDir(path)
-
-			steps := []migrate.Step{
-				&migrate.RemoteBackendStep{
-					Module: mod,
-					Config: migrate.RemoteBackendConfig{
-						Hostname:     c.String("hostname"),
-						Organization: c.String("organization"),
-						Workspaces: migrate.WorkspaceConfig{
-							Prefix: c.String("workspace-prefix"),
-							Name:   c.String("workspace-name"),
-						},
+			migration, diags := migrate.New(c.Args().First(), migrate.Config{
+				Backend: migrate.RemoteBackendConfig{
+					Hostname:     c.String("hostname"),
+					Organization: c.String("organization"),
+					Workspaces: migrate.WorkspaceConfig{
+						Prefix: c.String("workspace-prefix"),
+						Name:   c.String("workspace-name"),
 					},
 				},
-				&migrate.TerraformWorkspaceStep{
-					Module:   mod,
-					Variable: c.String("workspace-variable"),
-				},
-				&migrate.TfvarsStep{Module: mod},
+				// WorkspaceVariable: c.String("workspace-variable"),
+				// TfvarsFilename:    c.String("tfvars-filename"),
+			})
+
+			if diags.HasErrors() {
+				return diags
 			}
 
-			var changed bool
-			for _, step := range steps {
-				if step.Complete() {
-					continue
-				}
-
-				changes, err := step.Changes()
-				if err != nil {
-					return err
-				}
-
-				for path, file := range changes {
-					changed = true
-					var deleted string
-					if file == nil {
-						deleted = " (Will Be Deleted)"
-					}
-					fmt.Fprintln(os.Stderr, "file: ", path, deleted, "\nissue: ", step.Description())
-					if file != nil {
-						file.WriteTo(os.Stderr)
-					}
-
-					fmt.Fprint(os.Stderr, "\n")
-				}
+			changes, diags := migration.Changes()
+			if diags.HasErrors() {
+				return diags
 			}
 
-			if changed {
+			for path, change := range changes {
+				var rename string
+				if change.Rename != "" {
+					rename = fmt.Sprintf("(moved to %s)", change.Rename)
+				}
+
+				fmt.Fprintln(os.Stderr, "# file: ", path, rename)
+				change.File.WriteTo(os.Stderr)
+				fmt.Fprint(os.Stderr, "\n")
+			}
+
+			if len(changes) != 0 {
 				return errors.New("updates are required")
 			}
 

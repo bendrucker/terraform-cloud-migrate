@@ -1,12 +1,9 @@
 package migrate
 
 import (
-	"io/ioutil"
 	"path/filepath"
 
-	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
-	"github.com/hashicorp/terraform/configs"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -15,7 +12,7 @@ const (
 )
 
 type RemoteBackendStep struct {
-	Module *configs.Module
+	module *Module
 	Config RemoteBackendConfig
 }
 
@@ -32,7 +29,7 @@ type WorkspaceConfig struct {
 
 // Complete checks if the module is using a remote backend
 func (b *RemoteBackendStep) Complete() bool {
-	return b.Module.Backend != nil && b.Module.Backend.Type == BackendTypeRemote
+	return b.module.HasBackend() && b.module.Backend().Type == BackendTypeRemote
 }
 
 // Description returns a description of the step
@@ -49,17 +46,13 @@ func (b *RemoteBackendStep) MultipleWorkspaces() bool {
 func (b *RemoteBackendStep) Changes() (Changes, error) {
 	var path string
 	var file *hclwrite.File
-	if b.Module.Backend != nil {
-		path = b.Module.Backend.DeclRange.Filename
-		bytes, err := ioutil.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
-	
-		file, _ = hclwrite.ParseConfig(bytes, path, hcl.InitialPos)
+
+	if b.module.HasBackend() {
+		path = b.module.Backend().DeclRange.Filename
+		file = b.module.File(path)
 	} else {
-		path = filepath.Join(b.Module.SourceDir, "backend.tf")
-		file = hclwrite.NewEmptyFile()
+		path = filepath.Join(b.module.Dir(), "backend.tf")
+		file = b.module.File(path)
 		tf := file.Body().AppendBlock(hclwrite.NewBlock("terraform", []string{}))
 		tf.Body().AppendBlock(hclwrite.NewBlock("backend", []string{"remote"}))
 	}
@@ -91,7 +84,7 @@ func (b *RemoteBackendStep) Changes() (Changes, error) {
 
 	}
 
-	return Changes{path: file}, nil
+	return Changes{path: &Change{File: file}}, nil
 }
 
 var _ Step = (*RemoteBackendStep)(nil)
