@@ -6,17 +6,18 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/hashicorp/terraform/configs"
 )
 
 func TestRemoteBackendStep_incomplete(t *testing.T) {
-	parser := configs.NewParser(nil)
 	path := "./fixtures/backend/incomplete"
-	mod, _ := parser.LoadConfigDir(path)
+	mod, diags := NewModule(path)
+
+	if diags.HasErrors() {
+		assert.Fail(t, diags.Error())
+	}
 
 	step := RemoteBackendStep{
-		Module: mod,
+		module: mod,
 		Config: RemoteBackendConfig{
 			Hostname:     "host.name",
 			Organization: "org",
@@ -28,10 +29,8 @@ func TestRemoteBackendStep_incomplete(t *testing.T) {
 
 	assert.False(t, step.Complete())
 
-	changes, err := step.Changes()
-	if !assert.NoError(t, err) {
-		return
-	}
+	changes, diags := step.Changes()
+	assert.Len(t, diags, 0)
 
 	assert.Len(t, changes, 1)
 
@@ -48,16 +47,19 @@ terraform {
 }
 `)
 
-	assert.Equal(t, expected, string(changes[filepath.Join(path, "backend.tf")].Bytes()))
+	assert.Equal(t, expected+"\n", string(changes[filepath.Join(path, "backend.tf")].File.Bytes()))
 }
 
 func TestRemoteBackendStep_incomplete_prefix(t *testing.T) {
-	parser := configs.NewParser(nil)
 	path := "fixtures/backend/incomplete"
-	mod, _ := parser.LoadConfigDir(path)
+	mod, diags := NewModule(path)
+
+	if diags.HasErrors() {
+		assert.Error(t, diags)
+	}
 
 	step := RemoteBackendStep{
-		Module: mod,
+		module: mod,
 		Config: RemoteBackendConfig{
 			Hostname:     "host.name",
 			Organization: "org",
@@ -69,10 +71,8 @@ func TestRemoteBackendStep_incomplete_prefix(t *testing.T) {
 
 	assert.False(t, step.Complete())
 
-	changes, err := step.Changes()
-	if !assert.NoError(t, err) {
-		return
-	}
+	changes, diags := step.Changes()
+	assert.Len(t, diags, 0)
 
 	assert.Len(t, changes, 1)
 
@@ -89,15 +89,18 @@ terraform {
 }
 `)
 
-	assert.Equal(t, expected, string(changes[filepath.Join(path, "backend.tf")].Bytes()))
+	assert.Equal(t, expected+"\n", string(changes[filepath.Join(path, "backend.tf")].File.Bytes()))
 }
 
 func TestRemoteBackendStep_complete(t *testing.T) {
-	parser := configs.NewParser(nil)
-	mod, _ := parser.LoadConfigDir("./fixtures/backend/complete")
+	mod, diags := NewModule("./fixtures/backend/complete")
+
+	if diags.HasErrors() {
+		assert.Error(t, diags)
+	}
 
 	step := RemoteBackendStep{
-		Module: mod,
+		module: mod,
 	}
 
 	assert.True(t, step.Complete())

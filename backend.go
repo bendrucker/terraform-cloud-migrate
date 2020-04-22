@@ -18,13 +18,13 @@ type RemoteBackendStep struct {
 }
 
 type RemoteBackendConfig struct {
-	Hostname string
+	Hostname     string
 	Organization string
-	Workspaces WorkspaceConfig
+	Workspaces   WorkspaceConfig
 }
 
 type WorkspaceConfig struct {
-	Name string
+	Name   string
 	Prefix string
 }
 
