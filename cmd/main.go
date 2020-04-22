@@ -16,6 +16,11 @@ func main() {
 		Name:  "terraform-cloud-migrate",
 		Usage: "migrate a Terraform module to Terraform Cloud",
 		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  "write",
+				Usage: "Writes proposed changes to disk",
+				Value: false,
+			},
 			&cli.StringFlag{
 				Name:  "hostname",
 				Usage: "Hostname for Terraform Cloud",
@@ -72,19 +77,42 @@ func main() {
 				return diags
 			}
 
-			for path, change := range changes {
-				var rename string
-				if change.Rename != "" {
-					rename = fmt.Sprintf("(moved to %s)", change.Rename)
+			if c.Bool("write") {
+				for path, change := range changes {
+					destination := path
+					if change.Rename != "" {
+						destination = change.Rename
+					}
+
+					file, err := os.OpenFile(destination, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+					if err != nil {
+						return err
+					}
+
+					_, err = change.File.WriteTo(file)
+					if err != nil {
+						return err
+					}
+
+					if change.Rename != "" {
+						os.Remove(path)
+					}
+				}
+			} else {
+				for path, change := range changes {
+					var rename string
+					if change.Rename != "" {
+						rename = fmt.Sprintf("(moved to %s)", change.Rename)
+					}
+
+					fmt.Fprintln(os.Stderr, "# file: ", path, rename)
+					change.File.WriteTo(os.Stderr)
+					fmt.Fprint(os.Stderr, "\n")
 				}
 
-				fmt.Fprintln(os.Stderr, "# file: ", path, rename)
-				change.File.WriteTo(os.Stderr)
-				fmt.Fprint(os.Stderr, "\n")
-			}
-
-			if len(changes) != 0 {
-				return errors.New("updates are required")
+				if len(changes) != 0 {
+					return errors.New("updates are required")
+				}
 			}
 
 			return nil
