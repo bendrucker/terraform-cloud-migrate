@@ -44,7 +44,8 @@ func (s *TerraformWorkspaceStep) Changes() (Changes, hcl.Diagnostics) {
 		files[path] = &Change{File: file}
 	}
 
-	changes, diags := changedFiles(parser.Sources(), files)
+	changes, fDiags := changedFiles(parser.Sources(), files)
+	diags = append(diags, fDiags...)
 
 	if len(changes) == 0 {
 		return changes, diags
@@ -58,7 +59,8 @@ func (s *TerraformWorkspaceStep) Changes() (Changes, hcl.Diagnostics) {
 		if os.IsNotExist(err) {
 			file = hclwrite.NewEmptyFile()
 		} else {
-			file, _ = hclwrite.ParseConfig(b, path, hcl.InitialPos)
+			file, fDiags = hclwrite.ParseConfig(b, path, hcl.InitialPos)
+			diags = append(diags, fDiags...)
 		}
 
 		changes[path] = &Change{

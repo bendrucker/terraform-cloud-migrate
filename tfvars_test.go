@@ -5,41 +5,36 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/hashicorp/terraform/configs"
 )
 
 func TestTfvarsStep_incomplete(t *testing.T) {
-	parser := configs.NewParser(nil)
 	path := "./fixtures/tfvars/incomplete"
-	mod, _ := parser.LoadConfigDir(path)
+	mod, diags := NewModule(path)
+	if diags.HasErrors() {
+		assert.Fail(t, diags.Error())
+	}
 
 	step := TfvarsStep{
-		Module: mod,
+		module:   mod,
+		filename: "default.auto.tfvars",
 	}
 
 	assert.False(t, step.Complete())
 
-	changes, err := step.Changes()
-	if !assert.NoError(t, err) {
-		return
-	}
+	changes, diags := step.Changes()
+	assert.Len(t, diags, 0)
 
-	file, ok := changes[filepath.Join(path, "terraform.tfvars")]
-	assert.True(t, ok)
-	assert.Nil(t, file)
-
-	assert.NotNil(t, changes[filepath.Join(path, TfvarsAlternateFilename)])
-
+	change := changes[filepath.Join(path, "terraform.tfvars")]
+	assert.Equal(t, "default.auto.tfvars", change.Rename)
 }
 
 func TestTfvarsStep_complete(t *testing.T) {
-	parser := configs.NewParser(nil)
 	path := "./fixtures/tfvars/complete"
-	mod, _ := parser.LoadConfigDir(path)
+	mod, diags := NewModule(path)
+	assert.Len(t, diags, 0)
 
 	step := TerraformWorkspaceStep{
-		Module: mod,
+		module: mod,
 	}
 
 	assert.True(t, step.Complete())

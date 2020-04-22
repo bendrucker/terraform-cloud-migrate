@@ -1,7 +1,7 @@
 package migrate
 
 type Config struct {
-	Backend RemoteBackendConfig
+	Backend           RemoteBackendConfig
 	WorkspaceVariable string
-	TfvarsFilename string
+	TfvarsFilename    string
 }

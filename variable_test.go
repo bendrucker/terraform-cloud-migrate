@@ -6,26 +6,25 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/hashicorp/terraform/configs"
 )
 
 func TestTerraforkWorkspaceStep_incomplete(t *testing.T) {
-	parser := configs.NewParser(nil)
 	path := "./fixtures/terraform-workspace/incomplete"
-	mod, _ := parser.LoadConfigDir(path)
+	mod, diags := NewModule(path)
+
+	if diags.HasErrors() {
+		assert.Fail(t, diags.Error())
+	}
 
 	step := TerraformWorkspaceStep{
-		Module:   mod,
+		module:   mod,
 		Variable: "environment",
 	}
 
 	assert.False(t, step.Complete())
 
-	changes, err := step.Changes()
-	if !assert.NoError(t, err) {
-		return
-	}
+	changes, diags := step.Changes()
+	assert.Len(t, diags, 0)
 
 	expectedOutputs := strings.TrimSpace(`
 output "attribute" {
@@ -51,18 +50,21 @@ variable "foo" {}
 `)
 
 	assert.Len(t, changes, 2)
-	assert.Equal(t, expectedOutputs, strings.TrimSpace(string(changes[filepath.Join(path, "outputs.tf")].Bytes())))
-	assert.Equal(t, expectedVariables, strings.TrimSpace(string(changes[filepath.Join(path, "variables.tf")].Bytes())))
+	assert.Equal(t, expectedOutputs, strings.TrimSpace(string(changes[filepath.Join(path, "outputs.tf")].File.Bytes())))
+	assert.Equal(t, expectedVariables, strings.TrimSpace(string(changes[filepath.Join(path, "variables.tf")].File.Bytes())))
 
 }
 
 func TestTerraforkWorkspaceStep_complete(t *testing.T) {
-	parser := configs.NewParser(nil)
 	path := "./fixtures/terraform-workspace/complete"
-	mod, _ := parser.LoadConfigDir(path)
+	mod, diags := NewModule(path)
+
+	if diags.HasErrors() {
+		assert.Fail(t, diags.Error())
+	}
 
 	step := TerraformWorkspaceStep{
-		Module: mod,
+		module: mod,
 	}
 
 	assert.True(t, step.Complete())

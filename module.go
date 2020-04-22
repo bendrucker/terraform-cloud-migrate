@@ -17,8 +17,8 @@ func NewModule(path string) (*Module, hcl.Diagnostics) {
 		return nil, hcl.Diagnostics{
 			&hcl.Diagnostic{
 				Severity: hcl.DiagError,
-				Summary: "Not a module directory",
-				Detail: fmt.Sprintf("Directory %s does not contain Terraform configuration files.", path),
+				Summary:  "Not a module directory",
+				Detail:   fmt.Sprintf("Directory %s does not contain Terraform configuration files.", path),
 			},
 		}
 	}
@@ -27,14 +27,14 @@ func NewModule(path string) (*Module, hcl.Diagnostics) {
 
 	return &Module{
 		module: module,
-		files: make(map[string]*hclwrite.File),
+		files:  make(map[string]*hclwrite.File),
 	}, diags
 }
 
 // Module provides access to information about the Terraform module structure and the ability to update its files
 type Module struct {
 	module *configs.Module
-	files map[string]*hclwrite.File
+	files  map[string]*hclwrite.File
 }
 
 // Dir returns the module directory
@@ -57,6 +57,11 @@ func (m *Module) Variables() map[string]*configs.Variable {
 	return m.module.Variables
 }
 
+// HasBackend returns true if the module has a backend configuration
+func (m *Module) RemoteStateDataSources() map[string]*configs.Resource {
+	return m.module.DataResources
+}
+
 // File returns an existing file object or creates and caches one
 func (m *Module) File(path string) (*hclwrite.File, hcl.Diagnostics) {
 	file, ok := m.files[path]
@@ -69,8 +74,8 @@ func (m *Module) File(path string) (*hclwrite.File, hcl.Diagnostics) {
 		return nil, hcl.Diagnostics{
 			&hcl.Diagnostic{
 				Severity: hcl.DiagError,
-				Summary: "file read error",
-				Detail: fmt.Sprintf("file %s could not be read: %v", path, err),
+				Summary:  "file read error",
+				Detail:   fmt.Sprintf("file %s could not be read: %v", path, err),
 			},
 		}
 	}
@@ -86,6 +91,5 @@ func (m *Module) File(path string) (*hclwrite.File, hcl.Diagnostics) {
 		m.files[path] = file
 	}
 
-	
 	return file, diags
 }
