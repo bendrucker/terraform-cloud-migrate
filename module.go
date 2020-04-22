@@ -57,9 +57,17 @@ func (m *Module) Variables() map[string]*configs.Variable {
 	return m.module.Variables
 }
 
-// HasBackend returns true if the module has a backend configuration
-func (m *Module) RemoteStateDataSources() map[string]*configs.Resource {
-	return m.module.DataResources
+// RemoteStateDataSources returns a list of remote state data sources defined for the module
+func (m *Module) RemoteStateDataSources() []*configs.Resource {
+	resources := make([]*configs.Resource, 0)
+
+	for _, resource := range m.module.DataResources {
+		if resource.Type == "terraform_remote_state" {
+			resources = append(resources, resource)
+		}
+	}
+
+	return resources
 }
 
 // File returns an existing file object or creates and caches one

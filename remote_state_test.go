@@ -22,6 +22,7 @@ func TestRemoteStateStep_incomplete(t *testing.T) {
 				Name: "ws",
 			},
 		},
+		Path: "./fixtures/remote-state",
 	}
 
 	_, diags = step.Changes()

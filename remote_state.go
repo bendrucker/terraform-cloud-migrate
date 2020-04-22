@@ -38,7 +38,9 @@ func (s *RemoteStateStep) Changes() (Changes, hcl.Diagnostics) {
 			return nil
 		}
 
-		_, diags := s.moduleChanges(path)
+		sources, diags := s.sources(path)
+
+		_ = sources
 
 		return diags
 	})
@@ -53,10 +55,46 @@ func (s *RemoteStateStep) Changes() (Changes, hcl.Diagnostics) {
 }
 
 // Changes updates the configured backend
-func (s *RemoteStateStep) moduleChanges(path string) (Changes, hcl.Diagnostics) {
+func (s *RemoteStateStep) sources(path string) ([]*configs.Resource, hcl.Diagnostics) {
 	mod, diags := NewModule(path)
-	mod.RemoteStateDataSources()
-	return Changes{}, diags
+	sources := make([]*configs.Resource, 0)
+
+Source:
+	for _, source := range mod.RemoteStateDataSources() {
+		attrs, aDiags := source.Config.JustAttributes()
+		diags = append(diags, aDiags...)
+
+		for _, attr := range attrs {
+			switch attr.Name {
+			case "backend":
+				v, vDiags := attr.Expr.Value(nil)
+				diags = append(diags, vDiags...)
+
+				if v.AsString() != s.module.Backend().Type {
+					continue Source
+				}
+			case "config":
+				remoteStateConfig, rDiags := attr.Expr.Value(nil)
+				diags = append(diags, rDiags...)
+
+				remoteBackendConfigAttrs, rDiags := s.module.Backend().Config.JustAttributes()
+				diags = append(diags, rDiags...)
+
+				for key, value := range remoteStateConfig.AsValueMap() {
+					rbValue, rDiags := remoteBackendConfigAttrs[key].Expr.Value(nil)
+					diags = append(diags, rDiags...)
+
+					if value.AsString() != rbValue.AsString() {
+						continue Source
+					}
+				}
+			}
+		}
+
+		sources = append(sources, source)
+	}
+
+	return sources, diags
 }
 
 var _ Step = (*RemoteStateStep)(nil)
