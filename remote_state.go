@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/terraform/configs"
+	"github.com/zclconf/go-cty/cty"
 )
 
 type RemoteStateStep struct {
@@ -28,8 +29,9 @@ func (s *RemoteStateStep) Description() string {
 func (s *RemoteStateStep) Changes() (Changes, hcl.Diagnostics) {
 	parser := configs.NewParser(nil)
 	changes := Changes{}
+	diags := hcl.Diagnostics{}
 
-	err := filepath.Walk(s.Path, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(s.Path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -38,20 +40,46 @@ func (s *RemoteStateStep) Changes() (Changes, hcl.Diagnostics) {
 			return nil
 		}
 
-		sources, diags := s.sources(path)
+		sources, sDiags := s.sources(path)
+		diags = append(diags, sDiags...)
 
-		_ = sources
+		for _, source := range sources {
+			file, fDiags := s.module.File(source.DeclRange.Filename)
+			diags = append(diags, fDiags...)
 
-		return diags
+			// sourceAttrs, sDiags := source.Config.JustAttributes()
+			// diags = append(diags, sDiags...)
+
+			// if ws, ok := sourceAttrs["workspace"]; ok {
+			// 	workspace := ws.Expr
+			// 	diags = append(diags, wDiags...)
+			// }
+
+			block := file.Body().FirstMatchingBlock("data", []string{
+				source.Type,
+				source.Name,
+			})
+
+			block.Body().SetAttributeValue("backend", cty.StringVal("remote"))
+			block.Body().SetAttributeValue("config", cty.ObjectVal(map[string]cty.Value{
+				"hostname":     cty.StringVal(s.RemoteBackend.Hostname),
+				"organization": cty.StringVal(s.RemoteBackend.Organization),
+				"workspaces": cty.MapVal(map[string]cty.Value{
+					"name": cty.StringVal(s.RemoteBackend.Workspaces.Name),
+				}),
+			}))
+
+			changes[path] = &Change{File: file}
+		}
+
+		if diags.HasErrors() {
+			return diags
+		}
+
+		return nil
 	})
 
-	if err != nil {
-
-	}
-
-	return changes, nil
-
-	// return Changes{path: &Change{File: file}}, diags
+	return changes, diags
 }
 
 // Changes updates the configured backend
