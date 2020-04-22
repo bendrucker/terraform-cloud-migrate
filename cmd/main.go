@@ -49,6 +49,11 @@ func main() {
 				Usage: "New filename for terraform.tfvars",
 				Value: migrate.TfvarsAlternateFilename,
 			},
+			&cli.StringFlag{
+				Name:  "modules-dir",
+				Usage: "A directory where other Terraform modules are stored. If set, it will be scanned recursively for terrafor_remote_state references.",
+				Value: "",
+			},
 		},
 		Action: func(c *cli.Context) error {
 			if !c.IsSet("workspace-name") && !c.IsSet("workspace-prefix") {
@@ -66,6 +71,7 @@ func main() {
 				},
 				WorkspaceVariable: c.String("workspace-variable"),
 				TfvarsFilename:    c.String("tfvars-filename"),
+				ModulesDir:        c.String("modules-dir"),
 			})
 
 			if diags.HasErrors() {
