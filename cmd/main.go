@@ -13,6 +13,8 @@ import (
 
 func main() {
 	app := &cli.App{
+		Name:  "terraform-cloud-migrate",
+		Usage: "migrate a Terraform module to Terraform Cloud",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "hostname",
