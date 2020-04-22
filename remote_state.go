@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/hashicorp/terraform/configs"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -47,13 +49,14 @@ func (s *RemoteStateStep) Changes() (Changes, hcl.Diagnostics) {
 			file, fDiags := s.module.File(source.DeclRange.Filename)
 			diags = append(diags, fDiags...)
 
-			// sourceAttrs, sDiags := source.Config.JustAttributes()
-			// diags = append(diags, sDiags...)
+			sourceAttrs, sDiags := source.Config.JustAttributes()
+			diags = append(diags, sDiags...)
 
-			// if ws, ok := sourceAttrs["workspace"]; ok {
-			// 	workspace := ws.Expr
-			// 	diags = append(diags, wDiags...)
-			// }
+			if ws, ok := sourceAttrs["workspace"]; ok {
+				// workspace := ws.Expr
+				_ = ws
+				// diags = append(diags, wDiags...)
+			}
 
 			block := file.Body().FirstMatchingBlock("data", []string{
 				source.Type,
@@ -61,13 +64,92 @@ func (s *RemoteStateStep) Changes() (Changes, hcl.Diagnostics) {
 			})
 
 			block.Body().SetAttributeValue("backend", cty.StringVal("remote"))
-			block.Body().SetAttributeValue("config", cty.ObjectVal(map[string]cty.Value{
-				"hostname":     cty.StringVal(s.RemoteBackend.Hostname),
-				"organization": cty.StringVal(s.RemoteBackend.Organization),
-				"workspaces": cty.MapVal(map[string]cty.Value{
-					"name": cty.StringVal(s.RemoteBackend.Workspaces.Name),
-				}),
-			}))
+			block.Body().SetAttributeRaw("config", hclwrite.Tokens{
+				{
+					Type:  hclsyntax.TokenOBrace,
+					Bytes: []byte("{"),
+				},
+				{
+					Type:  hclsyntax.TokenNewline,
+					Bytes: []byte("\n"),
+				},
+				{
+					Type:  hclsyntax.TokenStringLit,
+					Bytes: []byte("hostname"),
+				},
+				{
+					Type:  hclsyntax.TokenEqual,
+					Bytes: []byte("= "),
+				},
+				{
+					Type:  hclsyntax.TokenQuotedLit,
+					Bytes: []byte(`"` + s.RemoteBackend.Hostname + `"`),
+				},
+				{
+					Type:  hclsyntax.TokenNewline,
+					Bytes: []byte("\n"),
+				},
+				{
+					Type:  hclsyntax.TokenStringLit,
+					Bytes: []byte("organization"),
+				},
+				{
+					Type:  hclsyntax.TokenEqual,
+					Bytes: []byte("= "),
+				},
+				{
+					Type:  hclsyntax.TokenQuotedLit,
+					Bytes: []byte(`"` + s.RemoteBackend.Organization + `"`),
+				},
+				{
+					Type:  hclsyntax.TokenNewline,
+					Bytes: []byte("\n\n"),
+				},
+				{
+					Type:  hclsyntax.TokenStringLit,
+					Bytes: []byte("workspaces"),
+				},
+				{
+					Type:  hclsyntax.TokenEqual,
+					Bytes: []byte(" ="),
+				},
+				{
+					Type:  hclsyntax.TokenOBrace,
+					Bytes: []byte("{"),
+				},
+				{
+					Type:  hclsyntax.TokenNewline,
+					Bytes: []byte("\n"),
+				},
+				{
+					Type:  hclsyntax.TokenStringLit,
+					Bytes: []byte("name"),
+				},
+				{
+					Type:  hclsyntax.TokenEqual,
+					Bytes: []byte("= "),
+				},
+				{
+					Type:  hclsyntax.TokenQuotedLit,
+					Bytes: []byte(`"` + s.RemoteBackend.Workspaces.Name + `"`),
+				},
+				{
+					Type:  hclsyntax.TokenNewline,
+					Bytes: []byte("\n"),
+				},
+				{
+					Type:  hclsyntax.TokenCBrace,
+					Bytes: []byte("}"),
+				},
+				{
+					Type:  hclsyntax.TokenNewline,
+					Bytes: []byte("\n"),
+				},
+				{
+					Type:  hclsyntax.TokenCBrace,
+					Bytes: []byte("}"),
+				},
+			})
 
 			changes[path] = &Change{File: file}
 		}
