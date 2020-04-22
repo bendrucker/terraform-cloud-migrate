@@ -3,6 +3,7 @@ package migrate
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -23,28 +24,11 @@ func NewModule(path string) (*Module, hcl.Diagnostics) {
 	}
 
 	module, diags := parser.LoadConfigDir(path)
-	primary, _, fDiags := parser.ConfigDirFiles(path)
-	diags = append(diags, fDiags...)
-
-	files := make(map[string]*hclwrite.File, len(primary))
-	for _, filename := range primary {
-		b, err := ioutil.ReadFile(filename)
-		if err != nil {
-			diags = diags.Append(&hcl.Diagnostic{
-				Severity: hcl.DiagError,
-				Summary: "file read error",
-				Detail: fmt.Sprintf("file %s could not be read: %v", filename, err),
-			})
-		}
-		file, fDiag := hclwrite.ParseConfig(b, filename, hcl.InitialPos)
-		diags = append(diags, fDiag...)
-		files[filename] = file
-	}
 
 	return &Module{
 		module: module,
-		files: files,
-	}, nil
+		files: make(map[string]*hclwrite.File),
+	}, diags
 }
 
 // Module provides access to information about the Terraform module structure and the ability to update its files
@@ -74,13 +58,34 @@ func (m *Module) Variables() map[string]*configs.Variable {
 }
 
 // File returns an existing file object or creates and caches one
-func (m *Module) File(path string) *hclwrite.File {
+func (m *Module) File(path string) (*hclwrite.File, hcl.Diagnostics) {
 	file, ok := m.files[path]
-	if !ok {
-		file = hclwrite.NewEmptyFile()
-		m.files[path] = file
-		return m.File(path)
+	if ok {
+		return file, hcl.Diagnostics{}
 	}
 
-	return file
+	b, err := ioutil.ReadFile(path)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, hcl.Diagnostics{
+			&hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary: "file read error",
+				Detail: fmt.Sprintf("file %s could not be read: %v", path, err),
+			},
+		}
+	}
+
+	var diags hcl.Diagnostics
+	if os.IsNotExist(err) {
+		file = hclwrite.NewEmptyFile()
+	} else {
+		file, diags = hclwrite.ParseConfig(b, path, hcl.InitialPos)
+	}
+
+	if file != nil {
+		m.files[path] = file
+	}
+
+	
+	return file, diags
 }

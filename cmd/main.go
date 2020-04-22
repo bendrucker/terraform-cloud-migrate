@@ -59,8 +59,8 @@ func main() {
 						Name:   c.String("workspace-name"),
 					},
 				},
-				// WorkspaceVariable: c.String("workspace-variable"),
-				// TfvarsFilename:    c.String("tfvars-filename"),
+				WorkspaceVariable: c.String("workspace-variable"),
+				TfvarsFilename:    c.String("tfvars-filename"),
 			})
 
 			if diags.HasErrors() {

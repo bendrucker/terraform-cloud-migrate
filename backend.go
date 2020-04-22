@@ -3,6 +3,7 @@ package migrate
 import (
 	"path/filepath"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -43,16 +44,17 @@ func (b *RemoteBackendStep) MultipleWorkspaces() bool {
 }
 
 // Changes updates the configured backend
-func (b *RemoteBackendStep) Changes() (Changes, error) {
+func (b *RemoteBackendStep) Changes() (Changes, hcl.Diagnostics) {
 	var path string
 	var file *hclwrite.File
+	var diags hcl.Diagnostics
 
 	if b.module.HasBackend() {
 		path = b.module.Backend().DeclRange.Filename
-		file = b.module.File(path)
+		file, diags = b.module.File(path)
 	} else {
 		path = filepath.Join(b.module.Dir(), "backend.tf")
-		file = b.module.File(path)
+		file, diags = b.module.File(path)
 		tf := file.Body().AppendBlock(hclwrite.NewBlock("terraform", []string{}))
 		tf.Body().AppendBlock(hclwrite.NewBlock("backend", []string{"remote"}))
 	}
@@ -84,7 +86,7 @@ func (b *RemoteBackendStep) Changes() (Changes, error) {
 
 	}
 
-	return Changes{path: &Change{File: file}}, nil
+	return Changes{path: &Change{File: file}}, diags
 }
 
 var _ Step = (*RemoteBackendStep)(nil)

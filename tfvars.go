@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/hashicorp/hcl/v2"
 )
 
 const (
@@ -32,20 +34,20 @@ func (s *TfvarsStep) path(filename string) string {
 }
 
 // Changes determines changes required to remove terraform.workspace
-func (s *TfvarsStep) Changes() (Changes, error) {
+func (s *TfvarsStep) Changes() (Changes, hcl.Diagnostics) {
 	if s.Complete() {
 		return Changes{}, nil
 	}
 
 	existing := s.path(TfvarsFilename)
-	file := s.module.File(existing)
+	file, diags := s.module.File(existing)
 
 	return Changes{
 		existing: &Change{
 			File:   file,
 			Rename: s.filename,
 		},
-	}, nil
+	}, diags
 }
 
 var _ Step = (*TfvarsStep)(nil)

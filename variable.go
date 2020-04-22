@@ -31,29 +31,23 @@ func (s *TerraformWorkspaceStep) Description() string {
 }
 
 // Changes determines changes required to remove terraform.workspace
-func (s *TerraformWorkspaceStep) Changes() (Changes, error) {
+func (s *TerraformWorkspaceStep) Changes() (Changes, hcl.Diagnostics) {
 	parser := configs.NewParser(nil)
-	primary, _, _ := parser.ConfigDirFiles(s.module.Dir())
+	primary, _, diags := parser.ConfigDirFiles(s.module.Dir())
 
 	files := make(Changes)
 	for _, path := range primary {
-		bytes, err := ioutil.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
+		file, fDiags := s.module.File(path)
+		diags = append(diags, fDiags...)
 
-		file, _ := hclwrite.ParseConfig(bytes, path, hcl.InitialPos)
 		replaceTerraformWorkspace(file.Body(), s.Variable)
 		files[path] = &Change{File: file}
 	}
 
-	changes, err := changedFiles(parser.Sources(), files)
-	if err != nil {
-		return nil, err
-	}
+	changes, diags := changedFiles(parser.Sources(), files)
 
 	if len(changes) == 0 {
-		return changes, nil
+		return changes, diags
 	}
 
 	if _, ok := s.module.Variables()[s.Variable]; !ok {
@@ -72,7 +66,7 @@ func (s *TerraformWorkspaceStep) Changes() (Changes, error) {
 		}
 	}
 
-	return changes, nil
+	return changes, diags
 }
 
 func replaceTerraformWorkspace(body *hclwrite.Body, variable string) {
@@ -88,13 +82,18 @@ func replaceTerraformWorkspace(body *hclwrite.Body, variable string) {
 	}
 }
 
-func changedFiles(sources map[string][]byte, changes Changes) (Changes, error) {
+func changedFiles(sources map[string][]byte, changes Changes) (Changes, hcl.Diagnostics) {
 	changed := make(Changes)
 
 	for path, change := range changes {
 		b, err := ioutil.ReadFile(path)
 		if err != nil {
-			return nil, err
+			return nil, hcl.Diagnostics{
+				&hcl.Diagnostic{
+					Summary: "file read error",
+					Detail:  fmt.Sprintf("could not read file %s", path),
+				},
+			}
 		}
 
 		if bytes.Equal(b, change.File.Bytes()) {
