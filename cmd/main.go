@@ -87,7 +87,7 @@ func main() {
 				for path, change := range changes {
 					destination := path
 					if change.Rename != "" {
-						destination = change.Rename
+						destination = filepath.Join(filepath.Dir(path), change.Rename)
 					}
 
 					file, err := os.OpenFile(destination, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
