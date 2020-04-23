@@ -142,6 +142,8 @@ func main() {
 				}
 			}
 
+			fmt.Println("")
+			fmt.Println("Migration complete!")
 			fmt.Println("If your workspace is VCS-enabled, commit these changes and push to trigger a run")
 			fmt.Println("If not, you can now call 'terraform plan' and 'terraform apply' locally.")
 
