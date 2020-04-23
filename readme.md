@@ -1,8 +1,6 @@
-# terraform-cloud-migrate [![tests](https://github.com/bendrucker/terraform-cloud-migrate/workflows/tests/badge.svg?branch=master)](https://github.com/bendrucker/terraform-cloud-migrate/actions?query=workflow%3Atests)
+# terraform-cloud-migrate [![tests](https://github.com/bendrucker/terraform-cloud-migrate/workflows/tests/badge.svg?branch=master)](https://github.com/bendrucker/terraform-cloud-migrate/actions?query=workflow%3Atests) [![Project Status: WIP](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 
 > Migrate a Terraform module to [Terraform Cloud](https://www.terraform.io/docs/cloud/index.html)
-
-**Status**: WIP
 
 The `terraform-cloud-migrate` CLI automates the process of adapting a Terraform [root module](https://www.terraform.io/docs/glossary.html#root-module) for [Terraform Cloud](https://www.terraform.io/docs/cloud/index.html) (including Terraform Enterprise). It performs a series of required configuration changes (described below) and runs `terraform init` which will prompt you to copy state from your existing backend to workspaces in Terraform Cloud.
 
