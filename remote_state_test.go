@@ -118,5 +118,5 @@ data "terraform_remote_state" "wrong_config" {
 }
 `)
 
-	assert.Equal(t, expected+"\n", string(changes["./fixtures/remote-state/incomplete-prefix"].File.Bytes()))
+	assert.Equal(t, expected+"\n", string(changes["fixtures/remote-state/incomplete-prefix/main.tf"].File.Bytes()))
 }
