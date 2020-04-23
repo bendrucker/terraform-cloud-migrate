@@ -15,14 +15,10 @@ import (
 
 func main() {
 	app := &cli.App{
-		Name:  "terraform-cloud-migrate",
-		Usage: "migrate a Terraform module to Terraform Cloud",
+		Name:      "terraform-cloud-migrate",
+		Usage:     "migrate a Terraform module to Terraform Cloud",
+		ArgsUsage: "[module]",
 		Flags: []cli.Flag{
-			&cli.BoolFlag{
-				Name:  "write",
-				Usage: "Writes proposed changes to disk. When --init is set, --write is implicitly set.",
-				Value: false,
-			},
 			&cli.StringFlag{
 				Name:  "hostname",
 				Usage: "Hostname for Terraform Cloud",
@@ -52,24 +48,28 @@ func main() {
 				Value: migrate.TfvarsAlternateFilename,
 			},
 			&cli.StringFlag{
-				Name:  "modules-dir",
+				Name:  "modules",
 				Usage: "A directory where other Terraform modules are stored. If set, it will be scanned recursively for terrafor_remote_state references.",
 				Value: "",
 			},
 			&cli.BoolFlag{
-				Name:  "init",
-				Usage: "When set, 'terraform init' will be called before and after updating configuration. After updating the backend configuration, Terraform will prompt to copy state.",
+				Name:  "no-init",
+				Usage: "Disable calling 'terraform init' before and after updating configuration to copy state.",
 				Value: false,
 			},
 		},
 		Action: func(c *cli.Context) error {
+			if c.Args().Len() != 1 {
+				return errors.New("module directory is required")
+			}
+
 			if !c.IsSet("workspace-name") && !c.IsSet("workspace-prefix") {
 				return errors.New("one of --workspace-name or --workspace-prefix must be set")
 			}
 
 			path := c.Args().First()
 
-			if c.Bool("init") {
+			if !c.Bool("no-init") {
 				if err := terraformInit(path); err != nil {
 					return fmt.Errorf("failed to init: %v", err)
 				}
@@ -86,7 +86,7 @@ func main() {
 				},
 				WorkspaceVariable: c.String("workspace-variable"),
 				TfvarsFilename:    c.String("tfvars-filename"),
-				ModulesDir:        c.String("modules-dir"),
+				ModulesDir:        c.String("modules"),
 			})
 
 			if diags.HasErrors() {
@@ -98,45 +98,28 @@ func main() {
 				return diags
 			}
 
-			if c.Bool("write") || c.Bool("init") {
-				for path, change := range changes {
-					destination := path
-					if change.Rename != "" {
-						destination = filepath.Join(filepath.Dir(path), change.Rename)
-					}
-
-					file, err := os.OpenFile(destination, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-					if err != nil {
-						return err
-					}
-
-					_, err = change.File.WriteTo(file)
-					if err != nil {
-						return err
-					}
-
-					if change.Rename != "" {
-						os.Remove(path)
-					}
-				}
-			} else {
-				for path, change := range changes {
-					var rename string
-					if change.Rename != "" {
-						rename = fmt.Sprintf("(moved to %s)", change.Rename)
-					}
-
-					fmt.Fprintln(os.Stderr, "# file: ", path, rename)
-					change.File.WriteTo(os.Stderr)
-					fmt.Fprint(os.Stderr, "\n")
+			for path, change := range changes {
+				destination := path
+				if change.Rename != "" {
+					destination = filepath.Join(filepath.Dir(path), change.Rename)
 				}
 
-				if len(changes) != 0 {
-					return errors.New("updates are required")
+				file, err := os.OpenFile(destination, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+				if err != nil {
+					return err
+				}
+
+				_, err = change.File.WriteTo(file)
+				if err != nil {
+					return err
+				}
+
+				if change.Rename != "" {
+					os.Remove(path)
 				}
 			}
 
-			if c.Bool("init") {
+			if !c.Bool("no-init") {
 				if err := terraformInit(path); err != nil {
 					return fmt.Errorf("failed to init: %v", err)
 				}
