@@ -1,4 +1,4 @@
-# terraform-cloud-migrate
+# terraform-cloud-migrate ![tests](https://github.com/bendrucker/terraform-cloud-migrate/workflows/tests/badge.svg?branch=master)
 
 > Migrate a Terraform module to [Terraform Cloud](https://www.terraform.io/docs/cloud/index.html)
 
