@@ -6,6 +6,8 @@
 
 The `terraform-cloud-migrate` CLI automates the process of adapting a Terraform [root module](https://www.terraform.io/docs/glossary.html#root-module) for [Terraform Cloud](https://www.terraform.io/docs/cloud/index.html) (including Terraform Enterprise). It performs a series of required configuration changes (described below) and runs `terraform init` which will prompt you to copy state from your existing backend to workspaces in Terraform Cloud.
 
+Versioning your Terraform configuration with `git` is **strongly** encouraged so you can recover in the event of unwanted changes.
+
 ## Usage
 
 ```sh
