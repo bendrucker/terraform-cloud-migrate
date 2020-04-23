@@ -9,10 +9,23 @@ The `terraform-cloud-migrate` CLI automates the process of adapting a Terraform 
 ## Usage
 
 ```sh
-terraform-cloud-migrate ./path/to/module --organization my-org --workspace-name my-ws ~/src/tf/my-module
+terraform-cloud-migrate \
+  --organization my-org \
+  --workspace-name my-ws \
+  ./path/to/module
+
+# with prefixes
+terraform-cloud-migrate \
+  --organization my-org \
+  --workspace-prefix my-ws- \
+  ./path/to/module
 
 # update terraform_remote_state with --modules
-terraform-cloud-migrate ./path/to/module --organization my-org --workspace-name my-ws --modules ~/src/tf/my-module
+terraform-cloud-migrate \
+  --organization my-org \
+  --workspace-name my-ws \
+  --modules ~/src/tf/my-module \
+  ./path/to/module
 ```
 
 ## Steps
