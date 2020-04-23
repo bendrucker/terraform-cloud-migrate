@@ -24,7 +24,7 @@ terraform-cloud-migrate \
 terraform-cloud-migrate \
   --organization my-org \
   --workspace-name my-ws \
-  --modules ~/src/tf/my-module \
+  --modules ~/src/terraform \
   ./path/to/module
 ```
 
