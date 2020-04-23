@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 
 	"github.com/hashicorp/hcl/v2"
@@ -21,8 +20,14 @@ type TerraformWorkspaceStep struct {
 
 // Complete checks if any terraform.workspace replaces are proposed
 func (s *TerraformWorkspaceStep) Complete() bool {
-	changes, _ := s.Changes()
-	return len(changes) == 0
+	files, _ := s.files()
+	for _, file := range files {
+		if hasTerraformWorkspace(file.Body()) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // Description returns a description of the step
@@ -30,22 +35,31 @@ func (s *TerraformWorkspaceStep) Description() string {
 	return `terraform.workpace will always be set to default and should not be used with Terraform Cloud (https://www.terraform.io/docs/state/workspaces.html#current-workspace-interpolation)`
 }
 
-// Changes determines changes required to remove terraform.workspace
-func (s *TerraformWorkspaceStep) Changes() (Changes, hcl.Diagnostics) {
+func (s *TerraformWorkspaceStep) files() (map[string]*hclwrite.File, hcl.Diagnostics) {
 	parser := configs.NewParser(nil)
-	primary, _, diags := parser.ConfigDirFiles(s.module.Dir())
+	files, _, diags := parser.ConfigDirFiles(s.module.Dir())
+	out := make(map[string]*hclwrite.File, len(files))
 
-	files := make(Changes)
-	for _, path := range primary {
+	for _, path := range files {
 		file, fDiags := s.module.File(path)
+		out[path] = file
 		diags = append(diags, fDiags...)
-
-		replaceTerraformWorkspace(file.Body(), s.Variable)
-		files[path] = &Change{File: file}
 	}
 
-	changes, fDiags := changedFiles(parser.Sources(), files)
-	diags = append(diags, fDiags...)
+	return out, diags
+}
+
+// Changes determines changes required to remove terraform.workspace
+func (s *TerraformWorkspaceStep) Changes() (Changes, hcl.Diagnostics) {
+	files, diags := s.files()
+
+	changes := make(Changes)
+	for path, file := range files {
+		if hasTerraformWorkspace(file.Body()) {
+			replaceTerraformWorkspace(file.Body(), s.Variable)
+			changes[path] = &Change{File: file}
+		}
+	}
 
 	if len(changes) == 0 {
 		return changes, diags
@@ -53,15 +67,8 @@ func (s *TerraformWorkspaceStep) Changes() (Changes, hcl.Diagnostics) {
 
 	if _, ok := s.module.Variables()[s.Variable]; !ok {
 		path := filepath.Join(s.module.Dir(), "variables.tf")
-		b, err := ioutil.ReadFile(path)
-
-		var file *hclwrite.File
-		if os.IsNotExist(err) {
-			file = hclwrite.NewEmptyFile()
-		} else {
-			file, fDiags = hclwrite.ParseConfig(b, path, hcl.InitialPos)
-			diags = append(diags, fDiags...)
-		}
+		file, fDiags := s.module.File(path)
+		diags = append(diags, fDiags...)
 
 		changes[path] = &Change{
 			File: addWorkspaceVariable(file, s.Variable),
@@ -69,6 +76,37 @@ func (s *TerraformWorkspaceStep) Changes() (Changes, hcl.Diagnostics) {
 	}
 
 	return changes, diags
+}
+
+func hasTerraformWorkspace(body *hclwrite.Body) bool {
+	for _, attr := range body.Attributes() {
+		for _, traversal := range attr.Expr().Variables() {
+			if tokensEqual(traversal.BuildTokens(nil), hclwrite.Tokens{
+				{
+					Type:  hclsyntax.TokenIdent,
+					Bytes: []byte("terraform"),
+				},
+				{
+					Type:  hclsyntax.TokenDot,
+					Bytes: []byte("."),
+				},
+				{
+					Type:  hclsyntax.TokenIdent,
+					Bytes: []byte("workspace"),
+				},
+			}) {
+				return true
+			}
+		}
+	}
+
+	for _, block := range body.Blocks() {
+		if hasTerraformWorkspace(block.Body()) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func replaceTerraformWorkspace(body *hclwrite.Body, variable string) {
@@ -129,6 +167,21 @@ func addWorkspaceVariable(file *hclwrite.File, name string) *hclwrite.File {
 	}
 
 	return file
+}
+
+func tokensEqual(a hclwrite.Tokens, b hclwrite.Tokens) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i, at := range a {
+		bt := b[i]
+		if at.Type != bt.Type || !bytes.Equal(at.Bytes, bt.Bytes) {
+			return false
+		}
+	}
+
+	return true
 }
 
 var _ Step = (*TerraformWorkspaceStep)(nil)

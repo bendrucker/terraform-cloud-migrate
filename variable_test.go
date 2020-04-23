@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTerraforkWorkspaceStep_incomplete(t *testing.T) {
+func TestTerraformWorkspaceStep_incomplete(t *testing.T) {
 	path := "./fixtures/terraform-workspace/incomplete"
 	mod, diags := NewModule(path)
 
@@ -55,7 +55,7 @@ variable "foo" {}
 
 }
 
-func TestTerraforkWorkspaceStep_complete(t *testing.T) {
+func TestTerraformWorkspaceStep_complete(t *testing.T) {
 	path := "./fixtures/terraform-workspace/complete"
 	mod, diags := NewModule(path)
 
