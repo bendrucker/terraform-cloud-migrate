@@ -61,7 +61,7 @@ data "terraform_remote_state" "wrong_config" {
 }
 `)
 
-	assert.Equal(t, expected+"\n", string(changes["./fixtures/remote-state/incomplete"].File.Bytes()))
+	assert.Equal(t, expected+"\n", string(changes["fixtures/remote-state/incomplete/main.tf"].File.Bytes()))
 }
 
 func TestRemoteStateStep_incomplete_prefix(t *testing.T) {
