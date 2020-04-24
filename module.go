@@ -19,6 +19,9 @@ func NewModule(path string) (*Module, hcl.Diagnostics) {
 				Severity: hcl.DiagError,
 				Summary:  "Not a module directory",
 				Detail:   fmt.Sprintf("Directory %s does not contain Terraform configuration files.", path),
+				Subject: &hcl.Range{
+					Filename: path,
+				},
 			},
 		}
 	}
