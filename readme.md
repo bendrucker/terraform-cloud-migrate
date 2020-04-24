@@ -9,19 +9,19 @@ Versioning your Terraform configuration with `git` is **strongly** encouraged so
 ## Usage
 
 ```sh
-terraform-cloud-migrate \
+terraform-cloud-migrate run \
   --organization my-org \
   --workspace-name my-ws \
   ./path/to/module
 
 # with prefixes
-terraform-cloud-migrate \
+terraform-cloud-migrate run \
   --organization my-org \
   --workspace-prefix my-ws- \
   ./path/to/module
 
 # update terraform_remote_state with --modules
-terraform-cloud-migrate \
+terraform-cloud-migrate run \
   --organization my-org \
   --workspace-name my-ws \
   --modules ~/src/terraform \
