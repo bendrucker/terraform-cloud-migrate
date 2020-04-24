@@ -52,7 +52,7 @@ terraform-cloud-migrate run --organization my-org --workspace-name my-ws ./path/
 Updates `terraform_remote_state` data sources in `~/src/tf`:
 
 ```sh
-terraform-cloud-migrate run --organization my-org --workspace-name my-ws --modules ~/src/tf ./path/to/module
+terraform-cloud-migrate run --modules ~/src/tf # ...
 ```
 
 ##### Terraform Enterprise
