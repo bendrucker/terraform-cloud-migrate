@@ -25,9 +25,7 @@ func main() {
 
 	app.Commands = map[string]cli.CommandFactory{
 		"run": func() (cli.Command, error) {
-			return &RunCommand{
-				Ui: ui,
-			}, nil
+			return NewRunCommand(ui), nil
 		},
 	}
 

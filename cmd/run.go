@@ -5,42 +5,68 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	migrate "github.com/bendrucker/terraform-cloud-migrate"
 	"github.com/mitchellh/cli"
 
+	"github.com/spf13/pflag"
 	flag "github.com/spf13/pflag"
 )
 
+func NewRunCommand(ui cli.Ui) cli.Command {
+	rc := &RunCommand{
+		Ui:    ui,
+		Flags: flag.NewFlagSet("run", flag.ContinueOnError),
+	}
+
+	rc.Flags.SortFlags = false
+	c := rc.Config
+	rc.Flags.StringVarP(&c.WorkspaceName, "workspace-name", "n", "", "The name of the Terraform Cloud workspace (conflicts with --workspace-prefix)")
+	rc.Flags.StringVarP(&c.WorkspacePrefix, "workspace-prefix", "p", "", "The prefix of the Terraform Cloud workspaces (conflicts with --workspace-name)")
+	rc.Flags.StringVarP(&c.ModulesDir, "modules", "m", "", "A directory where other Terraform modules are stored. If set, it will be scanned recursively for terrafor_remote_state references.")
+	rc.Flags.StringVar(&c.WorkspaceVariable, "workspace-variable", "environment", "Variable that will replace terraform.workspace")
+	rc.Flags.StringVar(&c.TfvarsFilename, "tfvars-filename", migrate.TfvarsAlternateFilename, "New filename for terraform.tfvars")
+
+	rc.Flags.StringVar(&c.Hostname, "hostname", "app.terraform.io", "Hostname for Terraform Cloud")
+	rc.Flags.StringVar(&c.Organization, "organization", "", "Organization name in Terraform Cloud")
+
+	rc.Flags.BoolVar(&c.NoInit, "no-init", false, "Disable calling 'terraform init' before and after updating configuration to copy state.")
+
+	return rc
+}
+
 type RunCommand struct {
-	Ui cli.Ui
+	Flags  *pflag.FlagSet
+	Config RunCommandConfig
+	Ui     cli.Ui
+}
+
+type RunCommandConfig struct {
+	Hostname          string
+	Organization      string
+	WorkspaceName     string
+	WorkspacePrefix   string
+	WorkspaceVariable string
+	TfvarsFilename    string
+	ModulesDir        string
+	NoInit            bool
 }
 
 func (c *RunCommand) Run(args []string) int {
 	var hostname, organization, name, prefix, variable, tfvarsName, modules string
 	var noInit bool
 
-	flags := flag.NewFlagSet("run", flag.ContinueOnError)
-
-	flags.StringVar(&hostname, "hostname", "app.terraform.io", "Hostname for Terraform Cloud")
-	flags.StringVar(&organization, "organization", "", "Organization name in Terraform Cloud")
-	flags.StringVar(&name, "workspace-name", "", "The name of the Terraform Cloud workspace (conflicts with --workspace-prefix)")
-	flags.StringVar(&prefix, "workspace-prefix", "", "The prefix of the Terraform Cloud workspaces (conflicts with --workspace-name)")
-	flags.StringVar(&variable, "workspace-variable", "environment", "Variable that will replace terraform.workspace")
-	flags.StringVar(&tfvarsName, "tfvars-filename", migrate.TfvarsAlternateFilename, "New filename for terraform.tfvars")
-	flags.StringVar(&modules, "modules", "", "A directory where other Terraform modules are stored. If set, it will be scanned recursively for terrafor_remote_state references.")
-	flags.BoolVar(&noInit, "no-init", false, "Disable calling 'terraform init' before and after updating configuration to copy state.")
-
-	if err := flags.Parse(args); err != nil {
+	if err := c.Flags.Parse(args); err != nil {
 		return 1
 	}
 
-	if len(flags.Args()) != 1 {
+	if len(c.Flags.Args()) != 1 {
 		c.Ui.Error("module path is required")
 		return 1
 	}
 
-	path := flags.Args()[0]
+	path := c.Flags.Args()[0]
 	abspath, err := filepath.Abs(path)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("failed to resolve path: %s", path))
@@ -129,7 +155,12 @@ func (c *RunCommand) Run(args []string) int {
 }
 
 func (c *RunCommand) Help() string {
-	return "Run Terraform Cloud migration"
+	return strings.TrimSpace(`
+Usage: terraform-cloud-migrate run [DIR] [options]
+  Migrate a Terraform module to Terraform Cloud
+
+Options:
+` + c.Flags.FlagUsages())
 }
 
 func (c *RunCommand) Synopsis() string {
