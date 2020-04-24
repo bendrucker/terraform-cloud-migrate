@@ -16,7 +16,7 @@ func TestTfvarsStep_incomplete(t *testing.T) {
 
 	step := TfvarsStep{
 		module:   mod,
-		filename: "default.auto.tfvars",
+		filename: "terraform.auto.tfvars",
 	}
 
 	assert.False(t, step.Complete())
@@ -25,7 +25,7 @@ func TestTfvarsStep_incomplete(t *testing.T) {
 	assert.Len(t, diags, 0)
 
 	change := changes[filepath.Join(path, "terraform.tfvars")]
-	assert.Equal(t, "default.auto.tfvars", change.Rename)
+	assert.Equal(t, "terraform.auto.tfvars", change.Rename)
 }
 
 func TestTfvarsStep_complete(t *testing.T) {

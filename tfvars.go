@@ -10,7 +10,7 @@ import (
 
 const (
 	TfvarsFilename          = "terraform.tfvars"
-	TfvarsAlternateFilename = "default.auto.tfvars"
+	TfvarsAlternateFilename = "terraform.auto.tfvars"
 )
 
 type TfvarsStep struct {

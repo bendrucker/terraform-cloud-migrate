@@ -35,7 +35,7 @@ Steps include a link to the Terraform docs where available.
 * Configures a remote backend. ([?](https://www.terraform.io/docs/cloud/migrate/index.html#step-5-edit-the-backend-configuration)).
 * Updates any [`terraform_remote_state`](https://www.terraform.io/docs/providers/terraform/d/remote_state.html) data sources that match the previous backend configuration.
 * Replaces `terraform.workspace` with a variable of your choice, `var.environment` by default. ([?](https://www.terraform.io/docs/state/workspaces.html#current-workspace-interpolation))
-* Renames `terraform.tfvars` to a name of your choice, `default.auto.tfvars` by default. ([?](https://www.terraform.io/docs/cloud/workspaces/variables.html#terraform-variables))
+* Renames `terraform.tfvars` to a name of your choice, `terraform.auto.tfvars` by default. ([?](https://www.terraform.io/docs/cloud/workspaces/variables.html#terraform-variables))
 
 ## License
 
