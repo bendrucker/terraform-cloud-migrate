@@ -1,4 +1,4 @@
-package migrate
+package steps
 
 import (
 	"path/filepath"
@@ -7,16 +7,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTfvarsStep_incomplete(t *testing.T) {
+func TestTfvars_incomplete(t *testing.T) {
 	path := "./fixtures/tfvars/incomplete"
-	mod, diags := NewModule(path)
+	mod, diags := NewWriter(path)
 	if diags.HasErrors() {
 		assert.Fail(t, diags.Error())
 	}
 
 	step := TfvarsStep{
-		module:   mod,
-		filename: "terraform.auto.tfvars",
+		Writer:   mod,
+		Filename: "terraform.auto.tfvars",
 	}
 
 	assert.False(t, step.Complete())
@@ -28,13 +28,13 @@ func TestTfvarsStep_incomplete(t *testing.T) {
 	assert.Equal(t, "terraform.auto.tfvars", change.Rename)
 }
 
-func TestTfvarsStep_complete(t *testing.T) {
+func TestTfvars_complete(t *testing.T) {
 	path := "./fixtures/tfvars/complete"
-	mod, diags := NewModule(path)
+	mod, diags := NewWriter(path)
 	assert.Len(t, diags, 0)
 
-	step := TerraformWorkspaceStep{
-		module: mod,
+	step := Tfvars{
+		Writer: mod,
 	}
 
 	assert.True(t, step.Complete())

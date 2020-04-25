@@ -1,4 +1,4 @@
-package migrate
+package steps
 
 import (
 	"bytes"
@@ -13,13 +13,17 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
-type TerraformWorkspaceStep struct {
-	module   *Module
+type TerraformWorkspace struct {
+	Writer   *Writer
 	Variable string
 }
 
+func (s *TerraformWorkspace) Name() string {
+	return "Replace terraform.workspace"
+}
+
 // Complete checks if any terraform.workspace replaces are proposed
-func (s *TerraformWorkspaceStep) Complete() bool {
+func (s *TerraformWorkspace) Complete() bool {
 	files, _ := s.files()
 	for _, file := range files {
 		if hasTerraformWorkspace(file.Body()) {
@@ -31,17 +35,17 @@ func (s *TerraformWorkspaceStep) Complete() bool {
 }
 
 // Description returns a description of the step
-func (s *TerraformWorkspaceStep) Description() string {
+func (s *TerraformWorkspace) Description() string {
 	return `terraform.workpace will always be set to default and should not be used with Terraform Cloud (https://www.terraform.io/docs/state/workspaces.html#current-workspace-interpolation)`
 }
 
-func (s *TerraformWorkspaceStep) files() (map[string]*hclwrite.File, hcl.Diagnostics) {
+func (s *TerraformWorkspace) files() (map[string]*hclwrite.File, hcl.Diagnostics) {
 	parser := configs.NewParser(nil)
-	files, _, diags := parser.ConfigDirFiles(s.module.Dir())
+	files, _, diags := parser.ConfigDirFiles(s.Writer.Dir())
 	out := make(map[string]*hclwrite.File, len(files))
 
 	for _, path := range files {
-		file, fDiags := s.module.File(path)
+		file, fDiags := s.Writer.File(path)
 		out[path] = file
 		diags = append(diags, fDiags...)
 	}
@@ -50,7 +54,7 @@ func (s *TerraformWorkspaceStep) files() (map[string]*hclwrite.File, hcl.Diagnos
 }
 
 // Changes determines changes required to remove terraform.workspace
-func (s *TerraformWorkspaceStep) Changes() (Changes, hcl.Diagnostics) {
+func (s *TerraformWorkspace) Changes() (Changes, hcl.Diagnostics) {
 	files, diags := s.files()
 
 	changes := make(Changes)
@@ -65,9 +69,9 @@ func (s *TerraformWorkspaceStep) Changes() (Changes, hcl.Diagnostics) {
 		return changes, diags
 	}
 
-	if _, ok := s.module.Variables()[s.Variable]; !ok {
-		path := filepath.Join(s.module.Dir(), "variables.tf")
-		file, fDiags := s.module.File(path)
+	if _, ok := s.Writer.Variables()[s.Variable]; !ok {
+		path := filepath.Join(s.Writer.Dir(), "variables.tf")
+		file, fDiags := s.Writer.File(path)
 		diags = append(diags, fDiags...)
 
 		changes[path] = &Change{
@@ -184,4 +188,4 @@ func tokensEqual(a hclwrite.Tokens, b hclwrite.Tokens) bool {
 	return true
 }
 
-var _ Step = (*TerraformWorkspaceStep)(nil)
+var _ Step = (*TerraformWorkspace)(nil)

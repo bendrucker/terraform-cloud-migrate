@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	migrate "github.com/bendrucker/terraform-cloud-migrate"
+	"github.com/bendrucker/terraform-cloud-migrate/steps"
 	"github.com/mitchellh/cli"
 
 	"github.com/spf13/pflag"
@@ -26,7 +27,7 @@ func NewRunCommand(ui cli.Ui) cli.Command {
 	rc.Flags.StringVarP(&c.WorkspacePrefix, "workspace-prefix", "p", "", "The prefix of the Terraform Cloud workspaces (conflicts with --workspace-name)")
 	rc.Flags.StringVarP(&c.ModulesDir, "modules", "m", "", "A directory where other Terraform modules are stored. If set, it will be scanned recursively for terrafor_remote_state references.")
 	rc.Flags.StringVar(&c.WorkspaceVariable, "workspace-variable", "environment", "Variable that will replace terraform.workspace")
-	rc.Flags.StringVar(&c.TfvarsFilename, "tfvars-filename", migrate.TfvarsAlternateFilename, "New filename for terraform.tfvars")
+	rc.Flags.StringVar(&c.TfvarsFilename, "tfvars-filename", steps.TfvarsAlternateFilename, "New filename for terraform.tfvars")
 
 	rc.Flags.StringVar(&c.Hostname, "hostname", "app.terraform.io", "Hostname for Terraform Cloud")
 	rc.Flags.StringVar(&c.Organization, "organization", "", "Organization name in Terraform Cloud")
@@ -86,10 +87,10 @@ func (c *RunCommand) Run(args []string) int {
 	}
 
 	migration, diags := migrate.New(path, migrate.Config{
-		Backend: migrate.RemoteBackendConfig{
+		Backend: steps.RemoteBackendConfig{
 			Hostname:     hostname,
 			Organization: organization,
-			Workspaces: migrate.WorkspaceConfig{
+			Workspaces: steps.WorkspaceConfig{
 				Prefix: prefix,
 				Name:   name,
 			},
@@ -111,36 +112,30 @@ func (c *RunCommand) Run(args []string) int {
 	if !noInit {
 		c.Ui.Info("Running 'terraform init' prior to updating backend")
 		c.Ui.Info("This ensures that Terraform has persisted the existing backend configuration to local state")
+		fmt.Println()
 
 		if code := c.terraformInit(abspath); code != 0 {
 			return code
 		}
 	}
 
+	if err := changes.WriteFiles(); err != nil {
+		return c.fail(err)
+	}
+
 	for path, change := range changes {
-		destination := path
+		str := path
 		if change.Rename != "" {
-			destination = filepath.Join(filepath.Dir(path), change.Rename)
+			str = fmt.Sprintf("%s -> %s", path, change.Destination(path))
 		}
 
-		file, err := os.OpenFile(destination, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-		if err != nil {
-			return c.fail(err)
-		}
-
-		_, err = change.File.WriteTo(file)
-		if err != nil {
-			return c.fail(err)
-		}
-
-		if change.Rename != "" {
-			os.Remove(path)
-		}
+		fmt.Println(str)
 	}
 
 	if !noInit {
 		c.Ui.Info("Running 'terraform init' to copy state")
 		c.Ui.Info("When prompted, type 'yes' to confirm")
+		fmt.Println()
 
 		if code := c.terraformInit(abspath); code != 0 {
 			return code

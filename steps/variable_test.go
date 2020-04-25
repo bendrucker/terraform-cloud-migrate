@@ -1,4 +1,4 @@
-package migrate
+package steps
 
 import (
 	"path/filepath"
@@ -8,16 +8,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTerraformWorkspaceStep_incomplete(t *testing.T) {
+func TestTerraformWorkspace_incomplete(t *testing.T) {
 	path := "./fixtures/terraform-workspace/incomplete"
-	mod, diags := NewModule(path)
+	mod, diags := NewWriter(path)
 
 	if diags.HasErrors() {
 		assert.Fail(t, diags.Error())
 	}
 
-	step := TerraformWorkspaceStep{
-		module:   mod,
+	step := TerraformWorkspace{
+		Writer:   mod,
 		Variable: "environment",
 	}
 
@@ -55,16 +55,16 @@ variable "foo" {}
 
 }
 
-func TestTerraformWorkspaceStep_complete(t *testing.T) {
+func TestTerraformWorkspace_complete(t *testing.T) {
 	path := "./fixtures/terraform-workspace/complete"
-	mod, diags := NewModule(path)
+	mod, diags := NewWriter(path)
 
 	if diags.HasErrors() {
 		assert.Fail(t, diags.Error())
 	}
 
-	step := TerraformWorkspaceStep{
-		module: mod,
+	step := TerraformWorkspace{
+		Writer: mod,
 	}
 
 	assert.True(t, step.Complete())

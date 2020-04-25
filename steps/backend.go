@@ -1,4 +1,4 @@
-package migrate
+package steps
 
 import (
 	"path/filepath"
@@ -12,8 +12,8 @@ const (
 	BackendTypeRemote = "remote"
 )
 
-type RemoteBackendStep struct {
-	module *Module
+type RemoteBackend struct {
+	Writer *Writer
 	Config RemoteBackendConfig
 }
 
@@ -28,33 +28,32 @@ type WorkspaceConfig struct {
 	Prefix string
 }
 
-// Complete checks if the module is using a remote backend
-func (b *RemoteBackendStep) Complete() bool {
-	return b.module.HasBackend() && b.module.Backend().Type == BackendTypeRemote
+func (b *RemoteBackend) Name() string {
+	return "Remote Backend"
 }
 
 // Description returns a description of the step
-func (b *RemoteBackendStep) Description() string {
+func (b *RemoteBackend) Description() string {
 	return `A "remote" backend should be configured for Terraform Cloud (https://www.terraform.io/docs/backends/types/remote.html)`
 }
 
 // MultipleWorkspaces returns whether the remote backend will be configured for multiple prefixed workspaces
-func (b *RemoteBackendStep) MultipleWorkspaces() bool {
+func (b *RemoteBackend) MultipleWorkspaces() bool {
 	return b.Config.Workspaces.Prefix != ""
 }
 
 // Changes updates the configured backend
-func (b *RemoteBackendStep) Changes() (Changes, hcl.Diagnostics) {
+func (b *RemoteBackend) Changes() (Changes, hcl.Diagnostics) {
 	var path string
 	var file *hclwrite.File
 	var diags hcl.Diagnostics
 
-	if b.module.HasBackend() {
-		path = b.module.Backend().DeclRange.Filename
-		file, diags = b.module.File(path)
+	if b.Writer.HasBackend() {
+		path = b.Writer.Backend().DeclRange.Filename
+		file, diags = b.Writer.File(path)
 	} else {
-		path = filepath.Join(b.module.Dir(), "backend.tf")
-		file, diags = b.module.File(path)
+		path = filepath.Join(b.Writer.Dir(), "backend.tf")
+		file, diags = b.Writer.File(path)
 		tf := file.Body().AppendBlock(hclwrite.NewBlock("terraform", []string{}))
 		tf.Body().AppendBlock(hclwrite.NewBlock("backend", []string{"remote"}))
 	}
@@ -89,4 +88,4 @@ func (b *RemoteBackendStep) Changes() (Changes, hcl.Diagnostics) {
 	return Changes{path: &Change{File: file}}, diags
 }
 
-var _ Step = (*RemoteBackendStep)(nil)
+var _ Step = (*RemoteBackend)(nil)

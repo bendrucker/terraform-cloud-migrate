@@ -1,59 +1,42 @@
 package migrate
 
 import (
+	filesteps "github.com/bendrucker/terraform-cloud-migrate/steps"
 	"github.com/hashicorp/hcl/v2"
 )
 
 func New(path string, config Config) (*Migration, hcl.Diagnostics) {
-	module, diags := NewModule(path)
-	steps := []Step{
-		&RemoteBackendStep{
-			module: module,
+	writer, diags := filesteps.NewWriter(path)
+	steps := filesteps.Steps{
+		&filesteps.RemoteBackend{
+			Writer: writer,
 			Config: config.Backend,
 		},
-		&TerraformWorkspaceStep{
-			module:   module,
+		&filesteps.TerraformWorkspace{
+			Writer:   writer,
 			Variable: config.WorkspaceVariable,
 		},
-		&TfvarsStep{
-			module:   module,
-			filename: config.TfvarsFilename,
+		&filesteps.Tfvars{
+			Writer:   writer,
+			Filename: config.TfvarsFilename,
 		},
 	}
 
 	if config.ModulesDir != "" {
-		steps = append(steps, &RemoteStateStep{
-			module:        module,
+		steps = steps.Append(&filesteps.RemoteState{
+			Writer:        writer,
 			RemoteBackend: config.Backend,
 			Path:          config.ModulesDir,
 		})
 	}
 
-	return &Migration{steps: steps}, diags
+	return &Migration{steps}, diags
 }
 
 type Migration struct {
-	steps []Step
+	steps filesteps.Steps
 }
 
-func (m *Migration) Changes() (Changes, hcl.Diagnostics) {
-	changes := make(Changes)
-	diags := hcl.Diagnostics{}
-
-	for _, step := range m.steps {
-		stepChanges, sDiags := step.Changes()
-		diags = append(diags, sDiags...)
-
-		for path, change := range stepChanges {
-			if existing, ok := changes[path]; ok {
-				if existing.Rename == "" {
-					existing.Rename = change.Rename
-				}
-			}
-
-			changes[path] = change
-		}
-	}
-
-	return changes, diags
+func (m *Migration) Changes() (filesteps.Changes, hcl.Diagnostics) {
+	return m.steps.Changes()
 }

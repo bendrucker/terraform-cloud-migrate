@@ -1,4 +1,4 @@
-package migrate
+package steps
 
 import (
 	"strings"
@@ -7,15 +7,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRemoteStateStep_incomplete(t *testing.T) {
+func TestRemoteState_incomplete(t *testing.T) {
 	path := "./fixtures/backend/incomplete"
-	mod, diags := NewModule(path)
+	mod, diags := NewWriter(path)
 	if diags.HasErrors() {
 		assert.Error(t, diags)
 	}
 
-	step := RemoteStateStep{
-		module: mod,
+	step := RemoteState{
+		Writer: mod,
 		RemoteBackend: RemoteBackendConfig{
 			Hostname:     "host.name",
 			Organization: "org",
@@ -64,15 +64,15 @@ data "terraform_remote_state" "wrong_config" {
 	assert.Equal(t, expected+"\n", string(changes["fixtures/remote-state/incomplete/main.tf"].File.Bytes()))
 }
 
-func TestRemoteStateStep_incomplete_prefix(t *testing.T) {
+func TestRemoteState_incomplete_prefix(t *testing.T) {
 	path := "./fixtures/backend/incomplete"
-	mod, diags := NewModule(path)
+	mod, diags := NewWriter(path)
 	if diags.HasErrors() {
 		assert.Error(t, diags)
 	}
 
-	step := RemoteStateStep{
-		module: mod,
+	step := RemoteState{
+		Writer: mod,
 		RemoteBackend: RemoteBackendConfig{
 			Hostname:     "host.name",
 			Organization: "org",

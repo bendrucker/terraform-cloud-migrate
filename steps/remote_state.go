@@ -1,4 +1,4 @@
-package migrate
+package steps
 
 import (
 	"os"
@@ -11,24 +11,23 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
-type RemoteStateStep struct {
-	module        *Module
+type RemoteState struct {
+	Writer        *Writer
 	Path          string
 	RemoteBackend RemoteBackendConfig
 }
 
-// Complete checks if any modules in the path are using remote_state
-func (s *RemoteStateStep) Complete() bool {
-	return false
+func (s *RemoteState) Name() string {
+	return "Remote State"
 }
 
 // Description returns a description of the step
-func (s *RemoteStateStep) Description() string {
+func (s *RemoteState) Description() string {
 	return `A "remote" backend should be configured for Terraform Cloud (https://www.terraform.io/docs/backends/types/remote.html)`
 }
 
 // Changes updates the configured backend
-func (s *RemoteStateStep) Changes() (Changes, hcl.Diagnostics) {
+func (s *RemoteState) Changes() (Changes, hcl.Diagnostics) {
 	parser := configs.NewParser(nil)
 	changes := Changes{}
 	diags := hcl.Diagnostics{}
@@ -47,7 +46,7 @@ func (s *RemoteStateStep) Changes() (Changes, hcl.Diagnostics) {
 
 		for _, source := range sources {
 			filepath := source.DeclRange.Filename
-			file, fDiags := s.module.File(source.DeclRange.Filename)
+			file, fDiags := s.Writer.File(source.DeclRange.Filename)
 			diags = append(diags, fDiags...)
 
 			block := file.Body().FirstMatchingBlock("data", []string{
@@ -176,8 +175,8 @@ func (s *RemoteStateStep) Changes() (Changes, hcl.Diagnostics) {
 }
 
 // Changes updates the configured backend
-func (s *RemoteStateStep) sources(path string) ([]*configs.Resource, hcl.Diagnostics) {
-	mod, diags := NewModule(path)
+func (s *RemoteState) sources(path string) ([]*configs.Resource, hcl.Diagnostics) {
+	mod, diags := NewWriter(path)
 	sources := make([]*configs.Resource, 0)
 
 Source:
@@ -188,14 +187,14 @@ Source:
 		backend, bDiags := attrs["backend"].Expr.Value(nil)
 		diags = append(diags, bDiags...)
 
-		if backend.AsString() != s.module.Backend().Type {
+		if backend.AsString() != s.Writer.Backend().Type {
 			continue
 		}
 
 		config, cDiags := attrs["config"].Expr.Value(nil)
 		diags = append(diags, cDiags...)
 
-		remoteBackendConfigAttrs, rDiags := s.module.Backend().Config.JustAttributes()
+		remoteBackendConfigAttrs, rDiags := s.Writer.Backend().Config.JustAttributes()
 		diags = append(diags, rDiags...)
 
 		for key, value := range config.AsValueMap() {
@@ -213,7 +212,7 @@ Source:
 	return sources, diags
 }
 
-func (s *RemoteStateStep) workspaceNameTokens(workspace *hclwrite.Attribute) hclwrite.Tokens {
+func (s *RemoteState) workspaceNameTokens(workspace *hclwrite.Attribute) hclwrite.Tokens {
 	if s.RemoteBackend.Workspaces.Prefix == "" {
 		return hclwrite.Tokens{
 			{
@@ -268,4 +267,4 @@ func flattenTokens(in []hclwrite.Tokens) hclwrite.Tokens {
 	return out
 }
 
-var _ Step = (*RemoteStateStep)(nil)
+var _ Step = (*RemoteState)(nil)
