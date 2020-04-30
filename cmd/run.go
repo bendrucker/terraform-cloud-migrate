@@ -16,8 +16,9 @@ import (
 
 func NewRunCommand(ui cli.Ui) cli.Command {
 	rc := &RunCommand{
-		Ui:    ui,
-		Flags: flag.NewFlagSet("run", flag.ContinueOnError),
+		Config: &RunCommandConfig{},
+		Ui:     ui,
+		Flags:  flag.NewFlagSet("run", flag.ContinueOnError),
 	}
 
 	rc.Flags.SortFlags = false
@@ -38,7 +39,7 @@ func NewRunCommand(ui cli.Ui) cli.Command {
 
 type RunCommand struct {
 	Flags  *pflag.FlagSet
-	Config RunCommandConfig
+	Config *RunCommandConfig
 	Ui     cli.Ui
 }
 
