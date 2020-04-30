@@ -6,6 +6,10 @@ The `terraform-cloud-migrate` CLI automates the process of adapting a Terraform 
 
 Versioning your Terraform configuration with `git` is **strongly** encouraged so you can recover in the event of unwanted changes.
 
+## Installing
+
+Binaries are available for each [tagged release](https://github.com/bendrucker/terraform-cloud-migrate/releases). Download an appropriate binary for your operating system and install it into `$PATH`.
+
 ## Usage
 
 ```
