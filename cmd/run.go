@@ -9,6 +9,7 @@ import (
 
 	migrate "github.com/bendrucker/terraform-cloud-migrate"
 	"github.com/bendrucker/terraform-cloud-migrate/configwrite"
+	"github.com/hashicorp/hcl/v2"
 	"github.com/mitchellh/cli"
 
 	"github.com/spf13/pflag"
@@ -99,12 +100,14 @@ func (c *RunCommand) Run(args []string) int {
 	})
 
 	if diags.HasErrors() {
-		return c.fail(diags)
+		c.printDiags(diags)
+		return 1
 	}
 
 	changes, diags := migration.Changes()
 	if diags.HasErrors() {
-		return c.fail(diags)
+		c.printDiags(diags)
+		return 1
 	}
 
 	if !c.Config.NoInit {
@@ -118,7 +121,8 @@ func (c *RunCommand) Run(args []string) int {
 	}
 
 	if err := changes.WriteFiles(); err != nil {
-		return c.fail(err)
+		c.Ui.Error(err.Error())
+		return 1
 	}
 
 	for path, change := range changes {
@@ -160,9 +164,17 @@ func (c *RunCommand) Synopsis() string {
 	return "Run Terraform Cloud migration"
 }
 
-func (c *RunCommand) fail(err error) int {
-	c.Ui.Error(err.Error())
-	return 1
+func (c *RunCommand) printDiags(diags hcl.Diagnostics) {
+	for _, diag := range diags {
+		switch diag.Severity {
+		case hcl.DiagError:
+			c.Ui.Error(diag.Summary)
+		case hcl.DiagWarning:
+			c.Ui.Warn(diag.Summary)
+		}
+		c.Ui.Info(diag.Detail)
+		c.Ui.Info(diag.Subject.String())
+	}
 }
 
 func (c *RunCommand) terraformInit(path string) int {
