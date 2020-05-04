@@ -7,27 +7,19 @@ import (
 
 func New(path string, config Config) (*Migration, hcl.Diagnostics) {
 	writer, diags := configwrite.New(path)
-	steps := configwrite.Steps{
-		&configwrite.RemoteBackend{
-			Writer: writer,
-			Config: config.Backend,
-		},
-		&configwrite.TerraformWorkspace{
-			Writer:   writer,
-			Variable: config.WorkspaceVariable,
-		},
-		&configwrite.Tfvars{
-			Writer:   writer,
-			Filename: configwrite.TfvarsFilename,
-		},
-	}
+	steps := configwrite.NewSteps(writer, configwrite.Steps{
+		&configwrite.RemoteBackend{Config: config.Backend},
+		&configwrite.TerraformWorkspace{Variable: config.WorkspaceVariable},
+		&configwrite.Tfvars{Filename: configwrite.TfvarsFilename},
+	})
 
 	if config.ModulesDir != "" {
-		steps = steps.Append(&configwrite.RemoteState{
-			Writer:        writer,
+		step := &configwrite.RemoteState{
 			RemoteBackend: config.Backend,
 			Path:          config.ModulesDir,
-		})
+		}
+		step.WithWriter(writer)
+		steps = steps.Append(step)
 	}
 
 	return &Migration{steps}, diags

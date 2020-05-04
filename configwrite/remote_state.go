@@ -12,9 +12,14 @@ import (
 )
 
 type RemoteState struct {
-	Writer        *Writer
+	writer        *Writer
 	Path          string
 	RemoteBackend RemoteBackendConfig
+}
+
+func (s *RemoteState) WithWriter(w *Writer) Step {
+	s.writer = w
+	return s
 }
 
 func (s *RemoteState) Name() string {
@@ -36,7 +41,7 @@ func (s *RemoteState) Changes() (Changes, hcl.Diagnostics) {
 			return err
 		}
 
-		if !info.IsDir() || !s.Writer.parser.IsConfigDir(path) {
+		if !info.IsDir() || !s.writer.parser.IsConfigDir(path) {
 			return nil
 		}
 
@@ -45,7 +50,7 @@ func (s *RemoteState) Changes() (Changes, hcl.Diagnostics) {
 
 		for _, source := range sources {
 			filepath := source.DeclRange.Filename
-			file, fDiags := s.Writer.File(source.DeclRange.Filename)
+			file, fDiags := s.writer.File(source.DeclRange.Filename)
 			diags = append(diags, fDiags...)
 
 			block := file.Body().FirstMatchingBlock("data", []string{
@@ -186,7 +191,7 @@ Source:
 		backend, bDiags := attrs["backend"].Expr.Value(nil)
 		diags = append(diags, bDiags...)
 
-		if backend.AsString() != s.Writer.Backend().Type {
+		if backend.AsString() != s.writer.Backend().Type {
 			continue
 		}
 
@@ -197,7 +202,7 @@ Source:
 		}
 		diags = append(diags, cDiags...)
 
-		remoteBackendConfigAttrs, rDiags := s.Writer.Backend().Config.JustAttributes()
+		remoteBackendConfigAttrs, rDiags := s.writer.Backend().Config.JustAttributes()
 		// errors when workspaces is block
 		if rDiags.HasErrors() {
 			continue

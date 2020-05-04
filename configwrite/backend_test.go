@@ -17,7 +17,7 @@ func TestRemoteBackend_incomplete(t *testing.T) {
 	}
 
 	step := RemoteBackend{
-		Writer: mod,
+		writer: mod,
 		Config: RemoteBackendConfig{
 			Hostname:     "host.name",
 			Organization: "org",
@@ -57,7 +57,7 @@ func TestRemoteBackend_incomplete_prefix(t *testing.T) {
 	}
 
 	step := RemoteBackend{
-		Writer: mod,
+		writer: mod,
 		Config: RemoteBackendConfig{
 			Hostname:     "host.name",
 			Organization: "org",
@@ -96,7 +96,7 @@ func TestRemoteBackend_complete(t *testing.T) {
 	}
 
 	step := RemoteBackend{
-		Writer: mod,
+		writer: mod,
 	}
 
 	changes, diags := step.Changes()

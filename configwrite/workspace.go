@@ -13,8 +13,13 @@ import (
 )
 
 type TerraformWorkspace struct {
-	Writer   *Writer
+	writer   *Writer
 	Variable string
+}
+
+func (s *TerraformWorkspace) WithWriter(w *Writer) Step {
+	s.writer = w
+	return s
 }
 
 func (s *TerraformWorkspace) Name() string {
@@ -39,11 +44,11 @@ func (s *TerraformWorkspace) Description() string {
 }
 
 func (s *TerraformWorkspace) files() (map[string]*hclwrite.File, hcl.Diagnostics) {
-	files, _, diags := s.Writer.parser.ConfigDirFiles(s.Writer.Dir())
+	files, _, diags := s.writer.parser.ConfigDirFiles(s.writer.Dir())
 	out := make(map[string]*hclwrite.File, len(files))
 
 	for _, path := range files {
-		file, fDiags := s.Writer.File(path)
+		file, fDiags := s.writer.File(path)
 		out[path] = file
 		diags = append(diags, fDiags...)
 	}
@@ -67,9 +72,9 @@ func (s *TerraformWorkspace) Changes() (Changes, hcl.Diagnostics) {
 		return changes, diags
 	}
 
-	if _, ok := s.Writer.Variables()[s.Variable]; !ok {
-		path := filepath.Join(s.Writer.Dir(), "variables.tf")
-		file, fDiags := s.Writer.File(path)
+	if _, ok := s.writer.Variables()[s.Variable]; !ok {
+		path := filepath.Join(s.writer.Dir(), "variables.tf")
+		file, fDiags := s.writer.File(path)
 		diags = append(diags, fDiags...)
 
 		changes[path] = &Change{

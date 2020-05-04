@@ -14,8 +14,13 @@ const (
 )
 
 type Tfvars struct {
-	Writer   *Writer
+	writer   *Writer
 	Filename string
+}
+
+func (s *Tfvars) WithWriter(w *Writer) Step {
+	s.writer = w
+	return s
 }
 
 func (s *Tfvars) Name() string {
@@ -24,7 +29,7 @@ func (s *Tfvars) Name() string {
 
 // Complete checks if a terraform.tfvars file exists and returns false if it does
 func (s *Tfvars) Complete() bool {
-	_, err := afero.ReadFile(s.Writer.fs, s.path(TfvarsFilename))
+	_, err := afero.ReadFile(s.writer.fs, s.path(TfvarsFilename))
 	return err != nil && os.IsNotExist(err)
 }
 
@@ -34,18 +39,18 @@ func (s *Tfvars) Description() string {
 }
 
 func (s *Tfvars) path(filename string) string {
-	return filepath.Join(s.Writer.Dir(), filename)
+	return filepath.Join(s.writer.Dir(), filename)
 }
 
 // Changes determines changes required to remove terraform.workspace
 func (s *Tfvars) Changes() (Changes, hcl.Diagnostics) {
-	s.Writer.parser.Sources()
+	s.writer.parser.Sources()
 	if s.Complete() {
 		return Changes{}, nil
 	}
 
 	existing := s.path(TfvarsFilename)
-	file, diags := s.Writer.File(existing)
+	file, diags := s.writer.File(existing)
 
 	return Changes{
 		existing: &Change{

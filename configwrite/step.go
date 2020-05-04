@@ -15,6 +15,15 @@ type Step interface {
 
 	// Changes returns a list of files changes and diagnostics if errors ocurred. If Complete() returns true, this should be empty.
 	Changes() (Changes, hcl.Diagnostics)
+
+	WithWriter(*Writer) Step
+}
+
+func NewSteps(w *Writer, steps Steps) Steps {
+	for _, step := range steps {
+		step.WithWriter(w)
+	}
+	return steps
 }
 
 type Steps []Step

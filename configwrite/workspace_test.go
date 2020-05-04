@@ -17,7 +17,7 @@ func TestTerraformWorkspace_incomplete(t *testing.T) {
 	}
 
 	step := TerraformWorkspace{
-		Writer:   mod,
+		writer:   mod,
 		Variable: "environment",
 	}
 
@@ -68,7 +68,7 @@ func TestTerraformWorkspace_complete(t *testing.T) {
 	}
 
 	step := TerraformWorkspace{
-		Writer: mod,
+		writer: mod,
 	}
 
 	assert.True(t, step.Complete())

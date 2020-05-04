@@ -13,7 +13,7 @@ const (
 )
 
 type RemoteBackend struct {
-	Writer *Writer
+	writer *Writer
 	Config RemoteBackendConfig
 }
 
@@ -26,6 +26,11 @@ type RemoteBackendConfig struct {
 type WorkspaceConfig struct {
 	Name   string
 	Prefix string
+}
+
+func (b *RemoteBackend) WithWriter(w *Writer) Step {
+	b.writer = w
+	return b
 }
 
 func (b *RemoteBackend) Name() string {
@@ -48,12 +53,12 @@ func (b *RemoteBackend) Changes() (Changes, hcl.Diagnostics) {
 	var file *hclwrite.File
 	var diags hcl.Diagnostics
 
-	if b.Writer.HasBackend() {
-		path = b.Writer.Backend().DeclRange.Filename
-		file, diags = b.Writer.File(path)
+	if b.writer.HasBackend() {
+		path = b.writer.Backend().DeclRange.Filename
+		file, diags = b.writer.File(path)
 	} else {
-		path = filepath.Join(b.Writer.Dir(), "backend.tf")
-		file, diags = b.Writer.File(path)
+		path = filepath.Join(b.writer.Dir(), "backend.tf")
+		file, diags = b.writer.File(path)
 		tf := file.Body().AppendBlock(hclwrite.NewBlock("terraform", []string{}))
 		tf.Body().AppendBlock(hclwrite.NewBlock("backend", []string{"remote"}))
 	}

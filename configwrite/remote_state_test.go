@@ -15,7 +15,7 @@ func TestRemoteState_incomplete(t *testing.T) {
 	}
 
 	step := RemoteState{
-		Writer: mod,
+		writer: mod,
 		RemoteBackend: RemoteBackendConfig{
 			Hostname:     "host.name",
 			Organization: "org",
@@ -72,7 +72,7 @@ func TestRemoteState_incomplete_prefix(t *testing.T) {
 	}
 
 	step := RemoteState{
-		Writer: mod,
+		writer: mod,
 		RemoteBackend: RemoteBackendConfig{
 			Hostname:     "host.name",
 			Organization: "org",
