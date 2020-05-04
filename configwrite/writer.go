@@ -1,4 +1,4 @@
-package migrate
+package configwrite
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform/configs"
 )
 
-func NewModule(path string) (*Module, hcl.Diagnostics) {
+func New(path string) (*Writer, hcl.Diagnostics) {
 	parser := configs.NewParser(nil)
 
 	if !parser.IsConfigDir(path) {
@@ -28,43 +28,43 @@ func NewModule(path string) (*Module, hcl.Diagnostics) {
 
 	module, diags := parser.LoadConfigDir(path)
 
-	return &Module{
+	return &Writer{
 		module: module,
 		files:  make(map[string]*hclwrite.File),
 	}, diags
 }
 
-// Module provides access to information about the Terraform module structure and the ability to update its files
-type Module struct {
+// Writer provides access to information about the Terraform module structure and the ability to update its files
+type Writer struct {
 	module *configs.Module
 	files  map[string]*hclwrite.File
 }
 
 // Dir returns the module directory
-func (m *Module) Dir() string {
-	return m.module.SourceDir
+func (w *Writer) Dir() string {
+	return w.module.SourceDir
 }
 
 // Backend returns the backend, or nil if none is defined
-func (m *Module) Backend() *configs.Backend {
-	return m.module.Backend
+func (w *Writer) Backend() *configs.Backend {
+	return w.module.Backend
 }
 
 // HasBackend returns true if the module has a backend configuration
-func (m *Module) HasBackend() bool {
-	return m.Backend() != nil
+func (w *Writer) HasBackend() bool {
+	return w.Backend() != nil
 }
 
 // Variables returns the declared variables for the module
-func (m *Module) Variables() map[string]*configs.Variable {
-	return m.module.Variables
+func (w *Writer) Variables() map[string]*configs.Variable {
+	return w.module.Variables
 }
 
 // RemoteStateDataSources returns a list of remote state data sources defined for the module
-func (m *Module) RemoteStateDataSources() []*configs.Resource {
+func (w *Writer) RemoteStateDataSources() []*configs.Resource {
 	resources := make([]*configs.Resource, 0)
 
-	for _, resource := range m.module.DataResources {
+	for _, resource := range w.module.DataResources {
 		if resource.Type == "terraform_remote_state" {
 			resources = append(resources, resource)
 		}
@@ -74,8 +74,8 @@ func (m *Module) RemoteStateDataSources() []*configs.Resource {
 }
 
 // File returns an existing file object or creates and caches one
-func (m *Module) File(path string) (*hclwrite.File, hcl.Diagnostics) {
-	file, ok := m.files[path]
+func (w *Writer) File(path string) (*hclwrite.File, hcl.Diagnostics) {
+	file, ok := w.files[path]
 	if ok {
 		return file, hcl.Diagnostics{}
 	}
@@ -99,7 +99,7 @@ func (m *Module) File(path string) (*hclwrite.File, hcl.Diagnostics) {
 	}
 
 	if file != nil {
-		m.files[path] = file
+		w.files[path] = file
 	}
 
 	return file, diags

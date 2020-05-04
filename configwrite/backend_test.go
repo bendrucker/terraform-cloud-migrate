@@ -1,4 +1,4 @@
-package migrate
+package configwrite
 
 import (
 	"path/filepath"
@@ -8,16 +8,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRemoteBackendStep_incomplete(t *testing.T) {
+func TestRemoteBackend_incomplete(t *testing.T) {
 	path := "./fixtures/backend/incomplete"
-	mod, diags := NewModule(path)
+	mod, diags := New(path)
 
 	if diags.HasErrors() {
 		assert.Fail(t, diags.Error())
 	}
 
-	step := RemoteBackendStep{
-		module: mod,
+	step := RemoteBackend{
+		Writer: mod,
 		Config: RemoteBackendConfig{
 			Hostname:     "host.name",
 			Organization: "org",
@@ -26,8 +26,6 @@ func TestRemoteBackendStep_incomplete(t *testing.T) {
 			},
 		},
 	}
-
-	assert.False(t, step.Complete())
 
 	changes, diags := step.Changes()
 	assert.Len(t, diags, 0)
@@ -50,16 +48,16 @@ terraform {
 	assert.Equal(t, expected+"\n", string(changes[filepath.Join(path, "backend.tf")].File.Bytes()))
 }
 
-func TestRemoteBackendStep_incomplete_prefix(t *testing.T) {
+func TestRemoteBackend_incomplete_prefix(t *testing.T) {
 	path := "fixtures/backend/incomplete"
-	mod, diags := NewModule(path)
+	mod, diags := New(path)
 
 	if diags.HasErrors() {
 		assert.Error(t, diags)
 	}
 
-	step := RemoteBackendStep{
-		module: mod,
+	step := RemoteBackend{
+		Writer: mod,
 		Config: RemoteBackendConfig{
 			Hostname:     "host.name",
 			Organization: "org",
@@ -68,8 +66,6 @@ func TestRemoteBackendStep_incomplete_prefix(t *testing.T) {
 			},
 		},
 	}
-
-	assert.False(t, step.Complete())
 
 	changes, diags := step.Changes()
 	assert.Len(t, diags, 0)
@@ -92,16 +88,18 @@ terraform {
 	assert.Equal(t, expected+"\n", string(changes[filepath.Join(path, "backend.tf")].File.Bytes()))
 }
 
-func TestRemoteBackendStep_complete(t *testing.T) {
-	mod, diags := NewModule("./fixtures/backend/complete")
+func TestRemoteBackend_complete(t *testing.T) {
+	mod, diags := New("./fixtures/backend/complete")
 
 	if diags.HasErrors() {
 		assert.Error(t, diags)
 	}
 
-	step := RemoteBackendStep{
-		module: mod,
+	step := RemoteBackend{
+		Writer: mod,
 	}
 
-	assert.True(t, step.Complete())
+	changes, diags := step.Changes()
+	assert.Len(t, changes, 1)
+	assert.Len(t, diags, 0)
 }

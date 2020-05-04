@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	migrate "github.com/bendrucker/terraform-cloud-migrate"
+	"github.com/bendrucker/terraform-cloud-migrate/configwrite"
+	"github.com/hashicorp/hcl/v2"
 	"github.com/mitchellh/cli"
 
 	"github.com/spf13/pflag"
@@ -27,7 +29,7 @@ func NewRunCommand(ui cli.Ui) cli.Command {
 	rc.Flags.StringVarP(&c.WorkspacePrefix, "workspace-prefix", "p", "", "The prefix of the Terraform Cloud workspaces (conflicts with --workspace-name)")
 	rc.Flags.StringVarP(&c.ModulesDir, "modules", "m", "", "A directory where other Terraform modules are stored. If set, it will be scanned recursively for terrafor_remote_state references.")
 	rc.Flags.StringVar(&c.WorkspaceVariable, "workspace-variable", "environment", "Variable that will replace terraform.workspace")
-	rc.Flags.StringVar(&c.TfvarsFilename, "tfvars-filename", migrate.TfvarsAlternateFilename, "New filename for terraform.tfvars")
+	rc.Flags.StringVar(&c.TfvarsFilename, "tfvars-filename", configwrite.TfvarsAlternateFilename, "New filename for terraform.tfvars")
 
 	rc.Flags.StringVar(&c.Hostname, "hostname", "app.terraform.io", "Hostname for Terraform Cloud")
 	rc.Flags.StringVar(&c.Organization, "organization", "", "Organization name in Terraform Cloud")
@@ -98,47 +100,44 @@ func (c *RunCommand) Run(args []string) int {
 	})
 
 	if diags.HasErrors() {
-		return c.fail(diags)
+		c.printDiags(diags)
+		return 1
 	}
 
 	changes, diags := migration.Changes()
 	if diags.HasErrors() {
-		return c.fail(diags)
+		c.printDiags(diags)
+		return 1
 	}
 
 	if !c.Config.NoInit {
 		c.Ui.Info("Running 'terraform init' prior to updating backend")
 		c.Ui.Info("This ensures that Terraform has persisted the existing backend configuration to local state")
+		fmt.Println()
 
 		if code := c.terraformInit(abspath); code != 0 {
 			return code
 		}
 	}
 
+	if err := changes.WriteFiles(); err != nil {
+		c.Ui.Error(err.Error())
+		return 1
+	}
+
 	for path, change := range changes {
-		destination := path
+		str := path
 		if change.Rename != "" {
-			destination = filepath.Join(filepath.Dir(path), change.Rename)
+			str = fmt.Sprintf("%s -> %s", path, change.Destination(path))
 		}
 
-		file, err := os.OpenFile(destination, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-		if err != nil {
-			return c.fail(err)
-		}
-
-		_, err = change.File.WriteTo(file)
-		if err != nil {
-			return c.fail(err)
-		}
-
-		if change.Rename != "" {
-			os.Remove(path)
-		}
+		fmt.Println(str)
 	}
 
 	if !c.Config.NoInit {
 		c.Ui.Info("Running 'terraform init' to copy state")
 		c.Ui.Info("When prompted, type 'yes' to confirm")
+		fmt.Println()
 
 		if code := c.terraformInit(abspath); code != 0 {
 			return code
@@ -165,9 +164,17 @@ func (c *RunCommand) Synopsis() string {
 	return "Run Terraform Cloud migration"
 }
 
-func (c *RunCommand) fail(err error) int {
-	c.Ui.Error(err.Error())
-	return 1
+func (c *RunCommand) printDiags(diags hcl.Diagnostics) {
+	for _, diag := range diags {
+		switch diag.Severity {
+		case hcl.DiagError:
+			c.Ui.Error(diag.Summary)
+		case hcl.DiagWarning:
+			c.Ui.Warn(diag.Summary)
+		}
+		c.Ui.Info(diag.Detail)
+		c.Ui.Info(diag.Subject.String())
+	}
 }
 
 func (c *RunCommand) terraformInit(path string) int {

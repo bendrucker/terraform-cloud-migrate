@@ -1,8 +1,13 @@
 package migrate
 
+import "github.com/bendrucker/terraform-cloud-migrate/configwrite"
+
 type Config struct {
-	Backend           RemoteBackendConfig
+	Backend           configwrite.RemoteBackendConfig
 	WorkspaceVariable string
 	TfvarsFilename    string
 	ModulesDir        string
 }
+
+type RemoteBackendConfig = configwrite.RemoteBackendConfig
+type WorkspaceConfig = configwrite.WorkspaceConfig
