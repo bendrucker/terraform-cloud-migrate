@@ -10,6 +10,7 @@ import (
 
 type stepTest struct {
 	name     string
+	step     Step
 	in       map[string]string
 	expected map[string]string
 	diags    hcl.Diagnostics
@@ -17,11 +18,11 @@ type stepTest struct {
 
 type stepTests []stepTest
 
-func testStepChanges(t *testing.T, step Step, tests stepTests) {
+func testStepChanges(t *testing.T, tests stepTests) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			writer := newTestModule(t, test.in)
-			changes, diags := step.WithWriter(writer).Changes()
+			changes, diags := test.step.WithWriter(writer).Changes()
 
 			out := make(map[string]string)
 			for path, change := range changes {
