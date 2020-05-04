@@ -1,6 +1,8 @@
 package configwrite
 
 import (
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/lithammer/dedent"
@@ -23,9 +25,19 @@ func newTestWriter(t *testing.T, path string, setup func(afero.Fs)) *Writer {
 func newTestModule(t *testing.T, files map[string]string) *Writer {
 	return newTestWriter(t, "", func(fs afero.Fs) {
 		for name, content := range files {
-			if err := afero.WriteFile(fs, name, []byte(dedent.Dedent(content)), 0644); err != nil {
+			if err := fs.MkdirAll(filepath.Dir(name), 0600); err != nil {
+				t.Error(err)
+			}
+			if err := afero.WriteFile(fs, name, []byte(trimTestConfig(content)), 0644); err != nil {
 				t.Error(err)
 			}
 		}
 	})
+}
+
+func trimTestConfig(config string) string {
+	config = dedent.Dedent(config)
+	config = strings.ReplaceAll(config, "\t", "  ")
+	config = strings.TrimLeft(config, "\n")
+	return config
 }

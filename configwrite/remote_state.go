@@ -2,12 +2,12 @@ package configwrite
 
 import (
 	"os"
-	"path/filepath"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/hashicorp/terraform/configs"
+	"github.com/spf13/afero"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -34,9 +34,9 @@ func (s *RemoteState) Description() string {
 // Changes updates the configured backend
 func (s *RemoteState) Changes() (Changes, hcl.Diagnostics) {
 	changes := Changes{}
-	diags := hcl.Diagnostics{}
+	var diags hcl.Diagnostics
 
-	_ = filepath.Walk(s.Path, func(path string, info os.FileInfo, err error) error {
+	_ = afero.Walk(s.writer.fs, s.Path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -180,7 +180,7 @@ func (s *RemoteState) Changes() (Changes, hcl.Diagnostics) {
 
 // Changes updates the configured backend
 func (s *RemoteState) sources(path string) ([]*configs.Resource, hcl.Diagnostics) {
-	writer, diags := New(path)
+	writer, diags := newWriter(path, s.writer.fs)
 	sources := make([]*configs.Resource, 0)
 
 Source:

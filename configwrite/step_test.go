@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/lithammer/dedent"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,7 +30,7 @@ func testStepChanges(t *testing.T, tests stepTests) {
 
 			expected := make(map[string]string)
 			for path, content := range test.expected {
-				expected[path] = dedent.Dedent(content)
+				expected[path] = trimTestConfig(content)
 			}
 
 			assert.Equal(t, expected, out)

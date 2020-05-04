@@ -49,6 +49,10 @@ func (b *RemoteBackend) MultipleWorkspaces() bool {
 
 // Changes updates the configured backend
 func (b *RemoteBackend) Changes() (Changes, hcl.Diagnostics) {
+	if b.writer.module.Backend.Type == "remote" {
+		return Changes{}, nil
+	}
+
 	var path string
 	var file *hclwrite.File
 	var diags hcl.Diagnostics

@@ -88,7 +88,7 @@ func (w *Writer) RemoteStateDataSources() []*configs.Resource {
 func (w *Writer) File(path string) (*hclwrite.File, hcl.Diagnostics) {
 	file, ok := w.files[path]
 	if ok {
-		return file, hcl.Diagnostics{}
+		return file, nil
 	}
 
 	b, err := afero.ReadFile(w.fs, path)

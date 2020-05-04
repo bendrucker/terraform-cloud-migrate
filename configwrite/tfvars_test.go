@@ -22,10 +22,9 @@ func TestTfvars(t *testing.T) {
 					baz = "qux"
 				`,
 			},
-			diags: nil,
 		},
 		{
-			name: "incomplete - custom name",
+			name: "incomplete/custom_name",
 			step: &Tfvars{Filename: "default.auto.tfvars"},
 			in: map[string]string{
 				"main.tf": "",
@@ -40,7 +39,6 @@ func TestTfvars(t *testing.T) {
 					baz = "qux"
 				`,
 			},
-			diags: nil,
 		},
 		{
 			name: "complete",
@@ -53,7 +51,6 @@ func TestTfvars(t *testing.T) {
 				`,
 			},
 			expected: map[string]string{},
-			diags:    nil,
 		},
 	})
 }
