@@ -17,8 +17,9 @@ import (
 
 func NewRunCommand(ui cli.Ui) cli.Command {
 	rc := &RunCommand{
-		Ui:    ui,
-		Flags: flag.NewFlagSet("run", flag.ContinueOnError),
+		Config: &RunCommandConfig{},
+		Ui:     ui,
+		Flags:  flag.NewFlagSet("run", flag.ContinueOnError),
 	}
 
 	rc.Flags.SortFlags = false
@@ -39,7 +40,7 @@ func NewRunCommand(ui cli.Ui) cli.Command {
 
 type RunCommand struct {
 	Flags  *pflag.FlagSet
-	Config RunCommandConfig
+	Config *RunCommandConfig
 	Ui     cli.Ui
 }
 
@@ -55,9 +56,6 @@ type RunCommandConfig struct {
 }
 
 func (c *RunCommand) Run(args []string) int {
-	var hostname, organization, name, prefix, variable, tfvarsName, modules string
-	var noInit bool
-
 	if err := c.Flags.Parse(args); err != nil {
 		return 1
 	}
@@ -76,28 +74,28 @@ func (c *RunCommand) Run(args []string) int {
 
 	c.Ui.Info(fmt.Sprintf("Upgrading Terraform module %s", abspath))
 
-	if name == "" && prefix == "" {
+	if c.Config.WorkspaceName == "" && c.Config.WorkspacePrefix == "" {
 		c.Ui.Error("workspace name or prefix is required")
 		return 1
 	}
 
-	if name != "" && prefix != "" {
+	if c.Config.WorkspaceName != "" && c.Config.WorkspacePrefix != "" {
 		c.Ui.Error("workspace cannot have a name and prefix")
 		return 1
 	}
 
 	migration, diags := migrate.New(path, migrate.Config{
-		Backend: configwrite.RemoteBackendConfig{
-			Hostname:     hostname,
-			Organization: organization,
-			Workspaces: configwrite.WorkspaceConfig{
-				Prefix: prefix,
-				Name:   name,
+		Backend: migrate.RemoteBackendConfig{
+			Hostname:     c.Config.Hostname,
+			Organization: c.Config.Organization,
+			Workspaces: migrate.WorkspaceConfig{
+				Prefix: c.Config.WorkspacePrefix,
+				Name:   c.Config.WorkspaceName,
 			},
 		},
-		WorkspaceVariable: variable,
-		TfvarsFilename:    tfvarsName,
-		ModulesDir:        modules,
+		WorkspaceVariable: c.Config.WorkspaceVariable,
+		TfvarsFilename:    c.Config.TfvarsFilename,
+		ModulesDir:        c.Config.ModulesDir,
 	})
 
 	if diags.HasErrors() {
@@ -109,7 +107,7 @@ func (c *RunCommand) Run(args []string) int {
 		return c.fail(diags)
 	}
 
-	if !noInit {
+	if !c.Config.NoInit {
 		c.Ui.Info("Running 'terraform init' prior to updating backend")
 		c.Ui.Info("This ensures that Terraform has persisted the existing backend configuration to local state")
 		fmt.Println()
@@ -132,7 +130,7 @@ func (c *RunCommand) Run(args []string) int {
 		fmt.Println(str)
 	}
 
-	if !noInit {
+	if !c.Config.NoInit {
 		c.Ui.Info("Running 'terraform init' to copy state")
 		c.Ui.Info("When prompted, type 'yes' to confirm")
 		fmt.Println()

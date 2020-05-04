@@ -8,3 +8,6 @@ type Config struct {
 	TfvarsFilename    string
 	ModulesDir        string
 }
+
+type RemoteBackendConfig = configwrite.RemoteBackendConfig
+type WorkspaceConfig = configwrite.WorkspaceConfig
