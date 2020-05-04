@@ -24,15 +24,14 @@ func (s Steps) Append(steps ...Step) Steps {
 }
 
 func (s Steps) Changes() (Changes, hcl.Diagnostics) {
-	changes := make(Changes)
-	diags := hcl.Diagnostics{}
+	result := make(Changes)
+	var diags hcl.Diagnostics
 
 	for _, step := range s {
-		stepChanges, sDiags := step.Changes()
-		diags = append(diags, sDiags...)
+		changes, diags = step.Changes()
 
-		for path, change := range stepChanges {
-			if err, ok := changes.Add(path, change).(*renameCollisionError); ok {
+		for path, change := range changes {
+			if err, ok := result.Add(path, change).(*renameCollisionError); ok {
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagWarning,
 					Summary:  "Rename skipped due to conflict",
@@ -41,6 +40,15 @@ func (s Steps) Changes() (Changes, hcl.Diagnostics) {
 				})
 			}
 		}
+
+		if diags.HasErrors() {
+			return result, diags.Append(&hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  fmt.Sprintf(`Step "%s" returned error(s)`, step.Name()),
+				Detail:   fmt.Sprintf(`The "%s" step returned %d error(s). It changed %d files. Check the results for accuracy.`, step.Name(), len(errorDiags(diags), len(changes))),
+			})
+		}
+
 	}
 
 	return changes, diags
