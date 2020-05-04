@@ -12,7 +12,7 @@ func TestTfvars_incomplete(t *testing.T) {
 		"terraform.tfvars": `
 			foo = "bar"
 			baz = "qux"
-		`
+		`,
 	})
 
 	step := Tfvars{
@@ -29,13 +29,19 @@ func TestTfvars_incomplete(t *testing.T) {
 }
 
 func TestTfvars_complete(t *testing.T) {
-	path := "./fixtures/tfvars/complete"
-	mod, diags := New(path)
-	assert.Len(t, diags, 0)
+	writer := newTestModule(t, map[string]string{
+		"main.tf": "",
+		"terraform.auto.tfvars": `
+			foo = "bar"
+			baz = "qux"
+		`,
+	})
 
 	step := Tfvars{
-		Writer: mod,
+		Writer: writer,
 	}
 
-	assert.True(t, step.Complete())
+	changes, diags := step.Changes()
+	assert.Len(t, diags, 0)
+	assert.Len(t, changes, 0)
 }
