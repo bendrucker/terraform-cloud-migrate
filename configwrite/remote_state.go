@@ -192,7 +192,7 @@ Source:
 		}
 
 		config, cDiags := attrs["config"].Expr.Value(nil)
-		// errors when workspaces is block
+		// errors on interpolations
 		if cDiags.HasErrors() {
 			continue
 		}
