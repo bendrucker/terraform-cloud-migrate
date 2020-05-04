@@ -47,6 +47,10 @@ variable "environment" {
 }
 
 variable "foo" {}
+
+variable "bar" {}
+
+variable "baz" {}
 `)
 
 	assert.Len(t, changes, 2)

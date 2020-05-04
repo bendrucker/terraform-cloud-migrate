@@ -151,24 +151,22 @@ func changedFiles(sources map[string][]byte, changes Changes) (Changes, hcl.Diag
 }
 
 func addWorkspaceVariable(file *hclwrite.File, name string) *hclwrite.File {
-	blocks := file.Body().Blocks()
-	file = hclwrite.NewEmptyFile()
-	body := file.Body()
-
-	variable := body.AppendBlock(hclwrite.NewBlock("variable", []string{name})).Body()
-	body.AppendNewline()
-
-	variable.SetAttributeRaw("type", hclwrite.Tokens{
+	variable := hclwrite.NewBlock("variable", []string{name})
+	variable.Body().SetAttributeRaw("type", hclwrite.Tokens{
 		{
 			Type:  hclsyntax.TokenIdent,
 			Bytes: []byte("string"),
 		},
 	})
-	variable.SetAttributeValue("description", cty.StringVal(fmt.Sprintf("The %s where the module will be deployed", name)))
+	variable.Body().SetAttributeValue("description", cty.StringVal(fmt.Sprintf("The %s where the module will be deployed", name)))
 
-	for _, block := range blocks {
-		body.AppendBlock(block)
-	}
+	body := file.Body()
+	existing := body.BuildTokens(nil)
+
+	body.Clear()
+	body.AppendBlock(variable)
+	body.AppendNewline()
+	body.AppendUnstructuredTokens(existing)
 
 	return file
 }
