@@ -28,7 +28,7 @@ func (s Steps) Changes() (Changes, hcl.Diagnostics) {
 	var diags hcl.Diagnostics
 
 	for _, step := range s {
-		changes, diags = step.Changes()
+		changes, diags := step.Changes()
 
 		for path, change := range changes {
 			if err, ok := result.Add(path, change).(*renameCollisionError); ok {
@@ -45,11 +45,11 @@ func (s Steps) Changes() (Changes, hcl.Diagnostics) {
 			return result, diags.Append(&hcl.Diagnostic{
 				Severity: hcl.DiagError,
 				Summary:  fmt.Sprintf(`Step "%s" returned error(s)`, step.Name()),
-				Detail:   fmt.Sprintf(`The "%s" step returned %d error(s). It changed %d files. Check the results for accuracy.`, step.Name(), len(errorDiags(diags), len(changes))),
+				Detail:   fmt.Sprintf(`The "%s" step returned %d error(s). It changed %d files. Check the results for accuracy.`, step.Name(), len(errorDiags(diags)), len(changes)),
 			})
 		}
 
 	}
 
-	return changes, diags
+	return result, diags
 }

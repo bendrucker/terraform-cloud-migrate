@@ -28,7 +28,6 @@ func (s *RemoteState) Description() string {
 
 // Changes updates the configured backend
 func (s *RemoteState) Changes() (Changes, hcl.Diagnostics) {
-	parser := configs.NewParser(nil)
 	changes := Changes{}
 	diags := hcl.Diagnostics{}
 
@@ -37,7 +36,7 @@ func (s *RemoteState) Changes() (Changes, hcl.Diagnostics) {
 			return err
 		}
 
-		if !info.IsDir() || !parser.IsConfigDir(path) {
+		if !info.IsDir() || !s.Writer.parser.IsConfigDir(path) {
 			return nil
 		}
 

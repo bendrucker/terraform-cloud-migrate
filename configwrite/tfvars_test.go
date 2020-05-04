@@ -1,30 +1,29 @@
 package configwrite
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTfvars_incomplete(t *testing.T) {
-	path := "./fixtures/tfvars/incomplete"
-	mod, diags := New(path)
-	if diags.HasErrors() {
-		assert.Fail(t, diags.Error())
-	}
+	writer := newTestModule(t, map[string]string{
+		"main.tf": "",
+		"terraform.tfvars": `
+foo = "bar"
+baz = "qux"
+		`})
 
 	step := Tfvars{
-		Writer:   mod,
+		Writer:   writer,
 		Filename: "terraform.auto.tfvars",
 	}
 
-	assert.False(t, step.Complete())
-
 	changes, diags := step.Changes()
 	assert.Len(t, diags, 0)
+	assert.Len(t, changes, 1)
 
-	change := changes[filepath.Join(path, "terraform.tfvars")]
+	change := changes["terraform.tfvars"]
 	assert.Equal(t, "terraform.auto.tfvars", change.Rename)
 }
 

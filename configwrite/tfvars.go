@@ -1,11 +1,11 @@
 package configwrite
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/spf13/afero"
 )
 
 const (
@@ -24,7 +24,7 @@ func (s *Tfvars) Name() string {
 
 // Complete checks if a terraform.tfvars file exists and returns false if it does
 func (s *Tfvars) Complete() bool {
-	_, err := ioutil.ReadFile(s.path(TfvarsFilename))
+	_, err := afero.ReadFile(s.Writer.fs, s.path(TfvarsFilename))
 	return err != nil && os.IsNotExist(err)
 }
 
@@ -39,9 +39,9 @@ func (s *Tfvars) path(filename string) string {
 
 // Changes determines changes required to remove terraform.workspace
 func (s *Tfvars) Changes() (Changes, hcl.Diagnostics) {
-	if s.Complete() {
-		return Changes{}, nil
-	}
+	// if s.Complete() {
+	// 	return Changes{}, nil
+	// }
 
 	existing := s.path(TfvarsFilename)
 	file, diags := s.Writer.File(existing)

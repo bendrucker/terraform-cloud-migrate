@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
-	"github.com/hashicorp/terraform/configs"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -40,8 +39,7 @@ func (s *TerraformWorkspace) Description() string {
 }
 
 func (s *TerraformWorkspace) files() (map[string]*hclwrite.File, hcl.Diagnostics) {
-	parser := configs.NewParser(nil)
-	files, _, diags := parser.ConfigDirFiles(s.Writer.Dir())
+	files, _, diags := s.Writer.parser.ConfigDirFiles(s.Writer.Dir())
 	out := make(map[string]*hclwrite.File, len(files))
 
 	for _, path := range files {

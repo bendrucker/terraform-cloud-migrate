@@ -2,16 +2,23 @@ package configwrite
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/hashicorp/terraform/configs"
+	"github.com/spf13/afero"
 )
 
 func New(path string) (*Writer, hcl.Diagnostics) {
-	parser := configs.NewParser(nil)
+	return newWriter(path, nil)
+}
+
+func newWriter(path string, fs afero.Fs) (*Writer, hcl.Diagnostics) {
+	if fs == nil {
+		fs = afero.NewOsFs()
+	}
+	parser := configs.NewParser(fs)
 
 	if !parser.IsConfigDir(path) {
 		return nil, hcl.Diagnostics{
@@ -29,6 +36,8 @@ func New(path string) (*Writer, hcl.Diagnostics) {
 	module, diags := parser.LoadConfigDir(path)
 
 	return &Writer{
+		fs:     fs,
+		parser: parser,
 		module: module,
 		files:  make(map[string]*hclwrite.File),
 	}, diags
@@ -36,6 +45,8 @@ func New(path string) (*Writer, hcl.Diagnostics) {
 
 // Writer provides access to information about the Terraform module structure and the ability to update its files
 type Writer struct {
+	fs     afero.Fs
+	parser *configs.Parser
 	module *configs.Module
 	files  map[string]*hclwrite.File
 }
@@ -80,7 +91,7 @@ func (w *Writer) File(path string) (*hclwrite.File, hcl.Diagnostics) {
 		return file, hcl.Diagnostics{}
 	}
 
-	b, err := ioutil.ReadFile(path)
+	b, err := afero.ReadFile(w.fs, path)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, hcl.Diagnostics{
 			&hcl.Diagnostic{
