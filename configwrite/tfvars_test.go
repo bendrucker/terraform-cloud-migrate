@@ -10,9 +10,10 @@ func TestTfvars_incomplete(t *testing.T) {
 	writer := newTestModule(t, map[string]string{
 		"main.tf": "",
 		"terraform.tfvars": `
-foo = "bar"
-baz = "qux"
-		`})
+			foo = "bar"
+			baz = "qux"
+		`
+	})
 
 	step := Tfvars{
 		Writer:   writer,
