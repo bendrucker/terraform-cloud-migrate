@@ -1,4 +1,4 @@
-package migrate
+package configwrite
 
 import (
 	"os"
@@ -12,9 +12,13 @@ import (
 )
 
 type RemoteState struct {
-	module        *Module
+	Writer        *Writer
 	Path          string
 	RemoteBackend RemoteBackendConfig
+}
+
+func (s *RemoteState) Name() string {
+	return "Update terraform_remote_state"
 }
 
 // Description returns a description of the step
@@ -42,7 +46,7 @@ func (s *RemoteState) Changes() (Changes, hcl.Diagnostics) {
 
 		for _, source := range sources {
 			filepath := source.DeclRange.Filename
-			file, fDiags := s.module.File(source.DeclRange.Filename)
+			file, fDiags := s.Writer.File(source.DeclRange.Filename)
 			diags = append(diags, fDiags...)
 
 			block := file.Body().FirstMatchingBlock("data", []string{
@@ -172,28 +176,41 @@ func (s *RemoteState) Changes() (Changes, hcl.Diagnostics) {
 
 // Changes updates the configured backend
 func (s *RemoteState) sources(path string) ([]*configs.Resource, hcl.Diagnostics) {
-	mod, diags := NewModule(path)
+	writer, diags := New(path)
 	sources := make([]*configs.Resource, 0)
 
 Source:
-	for _, source := range mod.RemoteStateDataSources() {
+	for _, source := range writer.RemoteStateDataSources() {
 		attrs, aDiags := source.Config.JustAttributes()
 		diags = append(diags, aDiags...)
 
 		backend, bDiags := attrs["backend"].Expr.Value(nil)
 		diags = append(diags, bDiags...)
 
-		if backend.AsString() != s.module.Backend().Type {
+		if backend.AsString() != s.Writer.Backend().Type {
 			continue
 		}
 
 		config, cDiags := attrs["config"].Expr.Value(nil)
+		// errors when workspaces is block
+		if cDiags.HasErrors() {
+			continue
+		}
 		diags = append(diags, cDiags...)
 
-		remoteBackendConfigAttrs, rDiags := s.module.Backend().Config.JustAttributes()
+		remoteBackendConfigAttrs, rDiags := s.Writer.Backend().Config.JustAttributes()
+		// errors when workspaces is block
+		if rDiags.HasErrors() {
+			continue
+		}
 		diags = append(diags, rDiags...)
 
 		for key, value := range config.AsValueMap() {
+			// workspaces is a block
+			if key == "workspaces" {
+				continue Source
+			}
+
 			rbValue, rDiags := remoteBackendConfigAttrs[key].Expr.Value(nil)
 			diags = append(diags, rDiags...)
 
