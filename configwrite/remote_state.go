@@ -1,4 +1,4 @@
-package configwrite
+package migrate
 
 import (
 	"os"
@@ -12,13 +12,9 @@ import (
 )
 
 type RemoteState struct {
-	Writer        *Writer
+	module        *Module
 	Path          string
 	RemoteBackend RemoteBackendConfig
-}
-
-func (s *RemoteState) Name() string {
-	return "Remote State"
 }
 
 // Description returns a description of the step
@@ -46,7 +42,7 @@ func (s *RemoteState) Changes() (Changes, hcl.Diagnostics) {
 
 		for _, source := range sources {
 			filepath := source.DeclRange.Filename
-			file, fDiags := s.Writer.File(source.DeclRange.Filename)
+			file, fDiags := s.module.File(source.DeclRange.Filename)
 			diags = append(diags, fDiags...)
 
 			block := file.Body().FirstMatchingBlock("data", []string{
@@ -176,7 +172,7 @@ func (s *RemoteState) Changes() (Changes, hcl.Diagnostics) {
 
 // Changes updates the configured backend
 func (s *RemoteState) sources(path string) ([]*configs.Resource, hcl.Diagnostics) {
-	mod, diags := New(path)
+	mod, diags := NewModule(path)
 	sources := make([]*configs.Resource, 0)
 
 Source:
@@ -187,14 +183,14 @@ Source:
 		backend, bDiags := attrs["backend"].Expr.Value(nil)
 		diags = append(diags, bDiags...)
 
-		if backend.AsString() != s.Writer.Backend().Type {
+		if backend.AsString() != s.module.Backend().Type {
 			continue
 		}
 
 		config, cDiags := attrs["config"].Expr.Value(nil)
 		diags = append(diags, cDiags...)
 
-		remoteBackendConfigAttrs, rDiags := s.Writer.Backend().Config.JustAttributes()
+		remoteBackendConfigAttrs, rDiags := s.module.Backend().Config.JustAttributes()
 		diags = append(diags, rDiags...)
 
 		for key, value := range config.AsValueMap() {
