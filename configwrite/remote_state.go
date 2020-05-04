@@ -1,4 +1,4 @@
-package steps
+package configwrite
 
 import (
 	"os"
@@ -176,7 +176,7 @@ func (s *RemoteState) Changes() (Changes, hcl.Diagnostics) {
 
 // Changes updates the configured backend
 func (s *RemoteState) sources(path string) ([]*configs.Resource, hcl.Diagnostics) {
-	mod, diags := NewWriter(path)
+	mod, diags := New(path)
 	sources := make([]*configs.Resource, 0)
 
 Source:

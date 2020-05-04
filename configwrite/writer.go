@@ -1,4 +1,4 @@
-package steps
+package configwrite
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform/configs"
 )
 
-func NewWriter(path string) (*Writer, hcl.Diagnostics) {
+func New(path string) (*Writer, hcl.Diagnostics) {
 	parser := configs.NewParser(nil)
 
 	if !parser.IsConfigDir(path) {

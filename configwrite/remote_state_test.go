@@ -1,4 +1,4 @@
-package steps
+package configwrite
 
 import (
 	"strings"
@@ -9,7 +9,7 @@ import (
 
 func TestRemoteState_incomplete(t *testing.T) {
 	path := "./fixtures/backend/incomplete"
-	mod, diags := NewWriter(path)
+	mod, diags := New(path)
 	if diags.HasErrors() {
 		assert.Error(t, diags)
 	}
@@ -66,7 +66,7 @@ data "terraform_remote_state" "wrong_config" {
 
 func TestRemoteState_incomplete_prefix(t *testing.T) {
 	path := "./fixtures/backend/incomplete"
-	mod, diags := NewWriter(path)
+	mod, diags := New(path)
 	if diags.HasErrors() {
 		assert.Error(t, diags)
 	}

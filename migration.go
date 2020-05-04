@@ -1,29 +1,29 @@
 package migrate
 
 import (
-	filesteps "github.com/bendrucker/terraform-cloud-migrate/steps"
+	"github.com/bendrucker/terraform-cloud-migrate/configwrite"
 	"github.com/hashicorp/hcl/v2"
 )
 
 func New(path string, config Config) (*Migration, hcl.Diagnostics) {
-	writer, diags := filesteps.NewWriter(path)
-	steps := filesteps.Steps{
-		&filesteps.RemoteBackend{
+	writer, diags := configwrite.New(path)
+	steps := configwrite.Steps{
+		&configwrite.RemoteBackend{
 			Writer: writer,
 			Config: config.Backend,
 		},
-		&filesteps.TerraformWorkspace{
+		&configwrite.TerraformWorkspace{
 			Writer:   writer,
 			Variable: config.WorkspaceVariable,
 		},
-		&filesteps.Tfvars{
+		&configwrite.Tfvars{
 			Writer:   writer,
-			Filename: config.TfvarsFilename,
+			Filename: configwrite.TfvarsFilename,
 		},
 	}
 
 	if config.ModulesDir != "" {
-		steps = steps.Append(&filesteps.RemoteState{
+		steps = steps.Append(&configwrite.RemoteState{
 			Writer:        writer,
 			RemoteBackend: config.Backend,
 			Path:          config.ModulesDir,
@@ -34,9 +34,9 @@ func New(path string, config Config) (*Migration, hcl.Diagnostics) {
 }
 
 type Migration struct {
-	steps filesteps.Steps
+	steps configwrite.Steps
 }
 
-func (m *Migration) Changes() (filesteps.Changes, hcl.Diagnostics) {
+func (m *Migration) Changes() (configwrite.Changes, hcl.Diagnostics) {
 	return m.steps.Changes()
 }

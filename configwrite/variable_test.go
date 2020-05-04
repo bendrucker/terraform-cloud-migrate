@@ -1,4 +1,4 @@
-package steps
+package configwrite
 
 import (
 	"path/filepath"
@@ -10,7 +10,7 @@ import (
 
 func TestTerraformWorkspace_incomplete(t *testing.T) {
 	path := "./fixtures/terraform-workspace/incomplete"
-	mod, diags := NewWriter(path)
+	mod, diags := New(path)
 
 	if diags.HasErrors() {
 		assert.Fail(t, diags.Error())
@@ -57,7 +57,7 @@ variable "foo" {}
 
 func TestTerraformWorkspace_complete(t *testing.T) {
 	path := "./fixtures/terraform-workspace/complete"
-	mod, diags := NewWriter(path)
+	mod, diags := New(path)
 
 	if diags.HasErrors() {
 		assert.Fail(t, diags.Error())

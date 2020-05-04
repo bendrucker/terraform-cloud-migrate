@@ -1,4 +1,4 @@
-package steps
+package configwrite
 
 import (
 	"path/filepath"
@@ -10,7 +10,7 @@ import (
 
 func TestRemoteBackend_incomplete(t *testing.T) {
 	path := "./fixtures/backend/incomplete"
-	mod, diags := NewWriter(path)
+	mod, diags := New(path)
 
 	if diags.HasErrors() {
 		assert.Fail(t, diags.Error())
@@ -26,8 +26,6 @@ func TestRemoteBackend_incomplete(t *testing.T) {
 			},
 		},
 	}
-
-	assert.False(t, step.Complete())
 
 	changes, diags := step.Changes()
 	assert.Len(t, diags, 0)
@@ -52,7 +50,7 @@ terraform {
 
 func TestRemoteBackend_incomplete_prefix(t *testing.T) {
 	path := "fixtures/backend/incomplete"
-	mod, diags := NewWriter(path)
+	mod, diags := New(path)
 
 	if diags.HasErrors() {
 		assert.Error(t, diags)
@@ -68,8 +66,6 @@ func TestRemoteBackend_incomplete_prefix(t *testing.T) {
 			},
 		},
 	}
-
-	assert.False(t, step.Complete())
 
 	changes, diags := step.Changes()
 	assert.Len(t, diags, 0)
@@ -93,7 +89,7 @@ terraform {
 }
 
 func TestRemoteBackend_complete(t *testing.T) {
-	mod, diags := NewWriter("./fixtures/backend/complete")
+	mod, diags := New("./fixtures/backend/complete")
 
 	if diags.HasErrors() {
 		assert.Error(t, diags)
@@ -103,5 +99,7 @@ func TestRemoteBackend_complete(t *testing.T) {
 		Writer: mod,
 	}
 
-	assert.True(t, step.Complete())
+	changes, diags := step.Changes()
+	assert.Len(t, changes, 1)
+	assert.Len(t, diags, 0)
 }

@@ -1,4 +1,4 @@
-package steps
+package configwrite
 
 import (
 	"io/ioutil"

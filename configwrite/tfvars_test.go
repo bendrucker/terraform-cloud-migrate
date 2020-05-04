@@ -1,4 +1,4 @@
-package steps
+package configwrite
 
 import (
 	"path/filepath"
@@ -9,12 +9,12 @@ import (
 
 func TestTfvars_incomplete(t *testing.T) {
 	path := "./fixtures/tfvars/incomplete"
-	mod, diags := NewWriter(path)
+	mod, diags := New(path)
 	if diags.HasErrors() {
 		assert.Fail(t, diags.Error())
 	}
 
-	step := TfvarsStep{
+	step := Tfvars{
 		Writer:   mod,
 		Filename: "terraform.auto.tfvars",
 	}
@@ -30,7 +30,7 @@ func TestTfvars_incomplete(t *testing.T) {
 
 func TestTfvars_complete(t *testing.T) {
 	path := "./fixtures/tfvars/complete"
-	mod, diags := NewWriter(path)
+	mod, diags := New(path)
 	assert.Len(t, diags, 0)
 
 	step := Tfvars{

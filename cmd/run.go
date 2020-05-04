@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	migrate "github.com/bendrucker/terraform-cloud-migrate"
-	"github.com/bendrucker/terraform-cloud-migrate/steps"
+	"github.com/bendrucker/terraform-cloud-migrate/configwrite"
 	"github.com/mitchellh/cli"
 
 	"github.com/spf13/pflag"
@@ -27,7 +27,7 @@ func NewRunCommand(ui cli.Ui) cli.Command {
 	rc.Flags.StringVarP(&c.WorkspacePrefix, "workspace-prefix", "p", "", "The prefix of the Terraform Cloud workspaces (conflicts with --workspace-name)")
 	rc.Flags.StringVarP(&c.ModulesDir, "modules", "m", "", "A directory where other Terraform modules are stored. If set, it will be scanned recursively for terrafor_remote_state references.")
 	rc.Flags.StringVar(&c.WorkspaceVariable, "workspace-variable", "environment", "Variable that will replace terraform.workspace")
-	rc.Flags.StringVar(&c.TfvarsFilename, "tfvars-filename", steps.TfvarsAlternateFilename, "New filename for terraform.tfvars")
+	rc.Flags.StringVar(&c.TfvarsFilename, "tfvars-filename", configwrite.TfvarsAlternateFilename, "New filename for terraform.tfvars")
 
 	rc.Flags.StringVar(&c.Hostname, "hostname", "app.terraform.io", "Hostname for Terraform Cloud")
 	rc.Flags.StringVar(&c.Organization, "organization", "", "Organization name in Terraform Cloud")
@@ -87,10 +87,10 @@ func (c *RunCommand) Run(args []string) int {
 	}
 
 	migration, diags := migrate.New(path, migrate.Config{
-		Backend: steps.RemoteBackendConfig{
+		Backend: configwrite.RemoteBackendConfig{
 			Hostname:     hostname,
 			Organization: organization,
-			Workspaces: steps.WorkspaceConfig{
+			Workspaces: configwrite.WorkspaceConfig{
 				Prefix: prefix,
 				Name:   name,
 			},
