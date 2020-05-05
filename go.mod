@@ -12,3 +12,5 @@ require (
 	github.com/stretchr/testify v1.3.0
 	github.com/zclconf/go-cty v1.2.1
 )
+
+replace github.com/hashicorp/hcl/v2 => github.com/bendrucker/hcl/v2 v2.4.1-0.20200429040843-8e720e092f94
