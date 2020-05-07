@@ -3,6 +3,7 @@ module github.com/bendrucker/terraform-cloud-migrate
 go 1.14
 
 require (
+	github.com/hashicorp/go-tfe v0.3.27
 	github.com/hashicorp/hcl/v2 v2.3.0
 	github.com/hashicorp/terraform v0.12.24
 	github.com/lithammer/dedent v1.1.0

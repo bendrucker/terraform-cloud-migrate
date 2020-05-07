@@ -85,7 +85,21 @@ func (c *RunCommand) Run(args []string) int {
 		return 1
 	}
 
+	api, diags := migrate.LoadAPIConfig(c.Config.Hostname)
+	if diags.HasErrors() {
+		c.printDiags(diags)
+		return 1
+	}
+
+	if api.Token == "" {
+		c.Ui.Error("Terraform Cloud/Enterprise API token is required")
+		fmt.Println()
+		c.Ui.Info(`Run "terraform login"`)
+		return 1
+	}
+
 	migration, diags := migrate.New(path, migrate.Config{
+		API: api,
 		Backend: migrate.RemoteBackendConfig{
 			Hostname:     c.Config.Hostname,
 			Organization: c.Config.Organization,
@@ -102,6 +116,26 @@ func (c *RunCommand) Run(args []string) int {
 	if diags.HasErrors() {
 		c.printDiags(diags)
 		return 1
+	}
+
+	ws, err := migration.GetWorkspaces()
+	if err != nil {
+		c.Ui.Error("Failed to list workspaces: " + err.Error())
+		c.Ui.Info(`Credentials may be expired or invalid. Re-run "terraform login".`)
+		return 1
+	}
+
+	if len(ws) == 0 {
+		c.Ui.Warn("No workspaces found")
+		fmt.Println()
+		c.Ui.Info(`When "terraform init" runs with the new backend configuration, it will attempt to create new workspaces.`)
+		c.Ui.Info(`If you are using the "tfe" provider and "tfe_workspace" you should create workspaces via Terraform before proceeding.`)
+
+		fmt.Println()
+		if _, err := c.Ui.Ask("Press enter to proceed:"); err != nil {
+			c.Ui.Error(err.Error())
+			return 1
+		}
 	}
 
 	changes, diags := migration.Changes()
@@ -173,7 +207,9 @@ func (c *RunCommand) printDiags(diags hcl.Diagnostics) {
 			c.Ui.Warn(diag.Summary)
 		}
 		c.Ui.Info(diag.Detail)
-		c.Ui.Info(diag.Subject.String())
+		if diag.Subject != nil {
+			c.Ui.Info(diag.Subject.String())
+		}
 	}
 }
 
